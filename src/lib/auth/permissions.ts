@@ -81,6 +81,43 @@ export function permissionsFor(roles: StaffRole[]): Permission[] {
   return PERMISSIONS.filter((p) => can(roles, p));
 }
 
+/**
+ * The refusal a screen shows when a role can't do something (§7.8).
+ *
+ * Named after what the person was trying to do and who CAN do it — "Front
+ * desk can't dispense — ask someone with pharmacy access" is actionable at
+ * a busy counter in a way a bare "forbidden" never is. Pure so the matrix
+ * is unit-testable; the request-scoped wrapper lives in lib/auth/guard.ts.
+ */
+const REQUIREMENT: Record<Permission, { verb: string; holder: string }> = {
+  "patient:register": { verb: "register patients or issue tokens", holder: "someone with front-desk access" },
+  "patient:merge": { verb: "merge patient records", holder: "someone with front-desk access" },
+  "vitals:record": { verb: "record vitals", holder: "someone with nursing or front-desk access" },
+  "consultation:write": { verb: "write consultations", holder: "a doctor" },
+  "prescription:write": { verb: "prescribe", holder: "a doctor" },
+  "prescription:dispense": { verb: "dispense", holder: "someone with pharmacy access" },
+  "inventory:purchase": { verb: "record stock purchases", holder: "someone with pharmacy access" },
+  "inventory:adjust": { verb: "adjust stock", holder: "someone with pharmacy access" },
+  "bill:create": { verb: "record bills", holder: "someone with billing access" },
+  "bill:discount": { verb: "apply discounts", holder: "the owner" },
+  "bill:refund": { verb: "record refunds", holder: "the owner" },
+  "reports:revenue": { verb: "view revenue reports", holder: "the owner or a doctor" },
+  "staff:manage": { verb: "manage staff", holder: "the owner" },
+  "settings:manage": { verb: "change settings", holder: "the owner" },
+  "mr:manage": { verb: "manage rep visits", holder: "front desk or a doctor" },
+  "procedure:execute": { verb: "run procedures", holder: "someone with nursing access" },
+};
+
+export function refusalFor(
+  name: string,
+  roles: StaffRole[],
+  permission: Permission,
+): string | null {
+  if (can(roles, permission)) return null;
+  const { verb, holder } = REQUIREMENT[permission];
+  return `${name} can't ${verb} — ask ${holder}.`;
+}
+
 export class PermissionError extends Error {
   constructor(readonly permission: Permission) {
     super(`Missing permission: ${permission}`);

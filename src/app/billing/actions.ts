@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { recordBill, type RecordBillResult } from "@/db/mutations/record-bill";
-import { getCurrentStaff } from "@/lib/auth/current-staff";
+import { requireCurrentStaffCan } from "@/lib/auth/guard";
 import type { BillLine } from "@/lib/billing/gst";
 
 /* Until auth is wired, the clinic is fixed to the seeded scenario. */
@@ -13,17 +13,15 @@ export async function recordBillAction(input: {
   lines: BillLine[];
   mode: "cash" | "upi" | "card";
 }): Promise<RecordBillResult> {
-  /* The audit trail must name whoever is actually signed in — this was a
-     hardcoded id from before the role switcher existed, so every bill was
-     attributed to the same person regardless of who collected it. */
-  const currentStaff = await getCurrentStaff(CLINIC_ID);
+  const auth = await requireCurrentStaffCan(CLINIC_ID, "bill:create");
+  if (!auth.ok) return auth;
 
   const result = await recordBill({
     clinicId: CLINIC_ID,
     visitId: input.visitId,
     lines: input.lines,
     mode: input.mode,
-    actorStaffId: currentStaff.id,
+    actorStaffId: auth.staff.id,
   });
 
   if (result.ok) {

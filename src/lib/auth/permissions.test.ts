@@ -5,6 +5,7 @@ import {
   PermissionError,
   permissionsFor,
   PERMISSIONS,
+  refusalFor,
 } from "./permissions";
 
 describe("owner", () => {
@@ -68,6 +69,38 @@ describe("role stacking (§7.12)", () => {
 describe("empty roles", () => {
   it("grants nothing", () => {
     expect(permissionsFor([])).toEqual([]);
+  });
+});
+
+describe("refusalFor", () => {
+  it("returns null when the permission is held", () => {
+    expect(refusalFor("Rekha S", ["pharmacy"], "prescription:dispense")).toBeNull();
+    expect(refusalFor("Anyone", ["owner"], "staff:manage")).toBeNull();
+  });
+
+  it("names the person, the act, and who can do it", () => {
+    const refusal = refusalFor("Latha Bai", ["nurse"], "prescription:dispense");
+    expect(refusal).toContain("Latha Bai");
+    expect(refusal).toContain("dispense");
+    expect(refusal).toContain("pharmacy");
+  });
+
+  it("refuses a doctor trying to dispense", () => {
+    expect(refusalFor("Dr. Anand Gowda", ["doctor"], "prescription:dispense")).not.toBeNull();
+  });
+
+  it("refuses front desk trying to prescribe", () => {
+    expect(refusalFor("Rekha S", ["front_desk"], "prescription:write")).not.toBeNull();
+  });
+
+  it("has a requirement phrase for every permission", () => {
+    /* A permission added without a refusal message would throw at runtime
+       the first time someone lacked it — catch that at test time instead. */
+    for (const permission of PERMISSIONS) {
+      const refusal = refusalFor("Nobody", [], permission);
+      expect(refusal, permission).toBeTruthy();
+      expect(refusal).toContain("ask");
+    }
   });
 });
 

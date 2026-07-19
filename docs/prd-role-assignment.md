@@ -81,9 +81,9 @@ Every phase: tsc + lint + full unit & DB itest suites green from a clean reset; 
 
 ## Phasing (for the Opus build passes)
 
-1. **Phase A:** P0-A attribution sweep (small, mechanical, high-integrity win) + P0-D.10 fallback fix.
-2. **Phase B:** P0-B enforcement helper + guards across all actions + itests.
-3. **Phase C:** P0-C staff/role management (mutations → Settings UI → doctor-role side effects) + P0-D.8/9/11 guards + itests + live verification.
+1. **Phase A:** ✅ Shipped 2026-07-19 (`ed68911`). All 9 hardcoded actor ids replaced with `getCurrentStaff()`; fallback now resolves any active owner (else any active staff) instead of one hardcoded id. Verified live: token issued signed-in-as-Latha is audit-logged as Latha.
+2. **Phase B:** ✅ Shipped 2026-07-19. `refusalFor()` (pure, in permissions.ts — 5 unit tests incl. every-permission-has-a-message) + `requireCurrentStaffCan()` (lib/auth/guard.ts) wired into all 11 mutating action files, incl. the consult two-level check (consultation:write always, prescription:write when drug lines exist). Verified live both ways: Latha (nurse+front_desk) reaching /pharmacy by URL gets "Latha Bai can't dispense — ask someone with pharmacy access." and writes nothing; Rekha performing the same dispense succeeds with stock movements + audit attributed to Rekha.
+3. **Phase C (next):** P0-C staff/role management (mutations → Settings UI → doctor-role side effects) + P0-D.8/9/11 guards + itests + live verification.
 4. **Phase D (P1, optional):** picker filtering, read redirects, attribution display.
 
 ---

@@ -6,7 +6,7 @@ import {
   type PrescriptionLineInput,
   type RecordConsultationResult,
 } from "@/db/mutations/record-consultation";
-import { getCurrentStaff } from "@/lib/auth/current-staff";
+import { requireCurrentStaffCan } from "@/lib/auth/guard";
 
 /* Until auth is wired, the clinic is fixed to the seeded scenario. */
 const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
@@ -29,17 +29,25 @@ export async function recordConsultationAction({
   lines: PrescriptionLineInput[];
 }): Promise<RecordConsultationResult> {
   /* The actor is whoever is signed in on this device, which is not always
-     the treating doctor stored on the visit — a nurse can be entering a
-     doctor's dictated note. doctorId names whose clinical record this is;
-     actorStaffId names who actually wrote it, for the audit trail. */
-  const currentStaff = await getCurrentStaff(CLINIC_ID);
+     the treating doctor stored on the visit. doctorId names whose clinical
+     record this is; actorStaffId names who actually wrote it. */
+  const auth = await requireCurrentStaffCan(CLINIC_ID, "consultation:write");
+  if (!auth.ok) return auth;
+
+  /* Prescribing is a stricter permission than closing a visit — a visit
+     with drug lines needs prescription:write too (§7.8, mirrored by the
+     RESTRICTIVE RLS policy on prescriptions). */
+  if (lines.length > 0) {
+    const rxAuth = await requireCurrentStaffCan(CLINIC_ID, "prescription:write");
+    if (!rxAuth.ok) return rxAuth;
+  }
 
   const result = await recordConsultation({
     clinicId: CLINIC_ID,
     visitId,
     tokenId,
     doctorId,
-    actorStaffId: currentStaff.id,
+    actorStaffId: auth.staff.id,
     diagnosis,
     advice: advice.trim() || null,
     followUpDate,
