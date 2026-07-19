@@ -3,6 +3,7 @@
 import { ScreenHeader } from "@/components/screen-header";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Card, GroupedList, Row, SectionLabel } from "@/components/ui/card";
+import { Dialog, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/primary-button";
 import { StatusPill, TokenBadge } from "@/components/ui/status";
@@ -306,11 +307,11 @@ function RegisterPatientDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 sm:items-center">
+    <Dialog onClose={onClose}>
       <Card className="w-full max-w-md p-5">
-        <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+        <DialogTitle className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
           Register new patient
-        </h2>
+        </DialogTitle>
         <p className="mt-1 text-[14px] text-ink-secondary">
           A date of birth or an age is required — either is enough.
         </p>
@@ -384,7 +385,7 @@ function RegisterPatientDialog({
           </div>
         </div>
       </Card>
-    </div>
+    </Dialog>
   );
 }
 

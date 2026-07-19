@@ -3,6 +3,7 @@
 import { ScreenHeader } from "@/components/screen-header";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Card, GroupedList, Row, SectionLabel } from "@/components/ui/card";
+import { Dialog, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/primary-button";
@@ -408,11 +409,17 @@ function SpecialtySelect({
   );
 }
 
-function DialogShell({ children }: { children: React.ReactNode }) {
+function DialogShell({
+  onClose,
+  children,
+}: {
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 sm:items-center">
+    <Dialog onClose={onClose}>
       <Card className="w-full max-w-md p-5">{children}</Card>
-    </div>
+    </Dialog>
   );
 }
 
@@ -478,10 +485,10 @@ function EditRolesDialog({
   };
 
   return (
-    <DialogShell>
-      <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+    <DialogShell onClose={onClose}>
+      <DialogTitle className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
         Roles for {member.name}
-      </h2>
+      </DialogTitle>
       <p className="mt-1 text-[14px] text-ink-secondary">
         Roles stack — a nurse who also runs the pharmacy holds both. The
         change is recorded with who made it and why.
@@ -546,10 +553,10 @@ function ToggleActiveDialog({
   };
 
   return (
-    <DialogShell>
-      <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+    <DialogShell onClose={onClose}>
+      <DialogTitle className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
         {deactivating ? "Deactivate" : "Reactivate"} {member.name}
-      </h2>
+      </DialogTitle>
       <p className="mt-1 text-[14px] text-ink-secondary">
         {deactivating
           ? "They stop appearing as available staff. Nothing is deleted — history keeps their name."
@@ -616,10 +623,10 @@ function AddStaffDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <DialogShell>
-      <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+    <DialogShell onClose={onClose}>
+      <DialogTitle className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
         Add staff member
-      </h2>
+      </DialogTitle>
       <p className="mt-1 text-[14px] text-ink-secondary">
         Creates the staff record. Their device login is set up separately.
       </p>

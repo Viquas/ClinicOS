@@ -2,6 +2,7 @@
 
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Card, GroupedList, Row } from "@/components/ui/card";
+import { Dialog, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IdentityHeader } from "@/components/ui/identity-header";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/primary-button";
@@ -215,11 +216,11 @@ function EditPatientDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 sm:items-center">
+    <Dialog onClose={onClose}>
       <Card className="w-full max-w-md p-5">
-        <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+        <DialogTitle className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
           Correct patient details
-        </h2>
+        </DialogTitle>
         <p className="mt-1 text-[14px] text-ink-secondary">
           Every correction is recorded with who made it and why — this is not
           a silent edit.
@@ -294,7 +295,7 @@ function EditPatientDialog({
           </div>
         </div>
       </Card>
-    </div>
+    </Dialog>
   );
 }
 
@@ -526,11 +527,11 @@ function AmendConsultationDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 sm:items-center">
+    <Dialog onClose={onClose}>
       <Card className="w-full max-w-md p-5">
-        <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+        <DialogTitle className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
           Amend {formatDate(entry.visitDate)}
-        </h2>
+        </DialogTitle>
         <p className="mt-1 text-[14px] text-ink-secondary">
           The original entry is kept, not overwritten — this becomes a
           correction on the record, visible to anyone who opens it.
@@ -592,7 +593,7 @@ function AmendConsultationDialog({
           </div>
         </div>
       </Card>
-    </div>
+    </Dialog>
   );
 }
 

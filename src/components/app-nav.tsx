@@ -1,5 +1,6 @@
 "use client";
 
+import { Dialog, DialogTitle } from "@/components/ui/dialog";
 import type { StaffRole } from "@/lib/auth/claims";
 import { roleCanVisit } from "@/lib/auth/route-roles";
 import { cn } from "@/lib/utils";
@@ -212,16 +213,19 @@ export function AppNav({
       </nav>
 
       {moreOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end bg-black/40 lg:hidden"
-          onClick={() => setMoreOpen(false)}
+        /* A bottom sheet rather than a centred card, so it overrides the
+           dialog shell's padding and stays items-end at every width. Backdrop
+           dismissal lives in Dialog now — hence no click handler and no
+           stopPropagation guard on the sheet. */
+        <Dialog
+          onClose={() => setMoreOpen(false)}
+          className="p-0 sm:items-end lg:hidden"
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full rounded-t-[28px] bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
-          >
+          <div className="w-full rounded-t-[28px] bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <div className="mb-2 flex items-center justify-between px-2">
-              <span className="text-[17px] font-bold text-ink">More</span>
+              <DialogTitle className="text-[17px] font-bold text-ink">
+                More
+              </DialogTitle>
               <button
                 onClick={() => setMoreOpen(false)}
                 aria-label="Close"
@@ -251,7 +255,7 @@ export function AppNav({
               ))}
             </ul>
           </div>
-        </div>
+        </Dialog>
       ) : null}
     </>
   );

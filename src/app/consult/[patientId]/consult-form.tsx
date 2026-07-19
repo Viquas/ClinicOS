@@ -2,6 +2,7 @@
 
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Card, SectionLabel } from "@/components/ui/card";
+import { Dialog, DialogTitle } from "@/components/ui/dialog";
 import { IdentityHeader } from "@/components/ui/identity-header";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/primary-button";
 import { StatusPill } from "@/components/ui/status";
@@ -372,25 +373,19 @@ export function ConsultForm({
       {/*
         Override dialog — the only path to prescribing into an allergy.
 
-        z-[60], not z-50: the bottom nav is z-50 and renders later in the DOM,
-        so an equal z-index put the nav ON TOP of this dialog's buttons at
-        mobile width — "Prescribe anyway" was half-hidden behind it. A modal
-        must always outrank persistent chrome, and the extra bottom padding
-        keeps the actions clear of the home indicator.
+        No z-index here any more: Dialog renders in the browser's top layer,
+        which outranks the z-50 bottom nav unconditionally. This used to be
+        z-[60] to stop the nav painting over "Prescribe anyway" at mobile
+        width; that class of bug is now structurally impossible.
       */}
       {pending ? (
-        <div
-          className={cn(
-            "fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 sm:items-center",
-            "pb-[calc(1rem+env(safe-area-inset-bottom))]",
-          )}
-        >
+        <Dialog onClose={() => setPending(null)}>
           <Card className="w-full max-w-md p-5">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-alert">
+            <DialogTitle className="text-[19px] font-extrabold tracking-[-0.02em] text-alert">
               {pendingConflicts[0]?.crossSensitivity
                 ? "Cross-sensitivity warning"
                 : "Recorded allergy"}
-            </h2>
+            </DialogTitle>
             <p className="mt-1.5 text-[15px] leading-snug text-ink">
               {patient.name} has a recorded allergy to{" "}
               <strong>{pendingConflicts[0]?.recordedAllergy}</strong>.{" "}
@@ -437,7 +432,7 @@ export function ConsultForm({
               </div>
             </div>
           </Card>
-        </div>
+        </Dialog>
       ) : null}
     </>
   );
