@@ -1,4 +1,5 @@
 import { getFamily, getPatient, getPatientTimeline } from "@/db/queries/patients";
+import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { getPatientFiles } from "@/db/queries/patient-files";
 import { getRecordRevisions } from "@/db/queries/revisions";
@@ -20,15 +21,27 @@ export default async function PatientRecordPage({
   params: Promise<{ patientId: string }>;
 }) {
   const { patientId } = await params;
+  const clinicId = await getActiveClinicId();
 
-  const patient = await getPatient(await getActiveClinicId(), patientId);
+  /*
+   * One tenant transaction for the whole chart (prd-real-auth.md Phase A):
+   * claims are set once and every read below runs under RLS on that same
+   * connection. Opening a transaction per query would work but would pay the
+   * round trip repeatedly for a page that is already several reads deep.
+   */
+  const patient = await tenantDb((tx) => getPatient(clinicId, patientId, tx));
   if (!patient) notFound();
 
-  const [timeline, files, currentStaff, family] = await Promise.all([
-    getPatientTimeline(await getActiveClinicId(), patientId),
-    getPatientFiles(await getActiveClinicId(), patientId),
-    getCurrentStaff(await getActiveClinicId()),
-    getFamily(await getActiveClinicId(), patient.phone),
+  const [timeline, family] = await tenantDb(async (tx) =>
+    Promise.all([
+      getPatientTimeline(clinicId, patientId, tx),
+      getFamily(clinicId, patient.phone, tx),
+    ]),
+  );
+
+  const [files, currentStaff] = await Promise.all([
+    getPatientFiles(clinicId, patientId),
+    getCurrentStaff(clinicId),
   ]);
 
   /* One phone number holds several people — the parent's phone with the
@@ -48,7 +61,7 @@ export default async function PatientRecordPage({
         .filter((entry) => entry.amended)
         .map(async (entry) => [
           entry.visitId,
-          await getRecordRevisions(await getActiveClinicId(), "consultations", entry.visitId),
+          await getRecordRevisions(clinicId, "consultations", entry.visitId),
         ]),
     ),
   );

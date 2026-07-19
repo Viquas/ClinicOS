@@ -10,11 +10,16 @@ import {
 import { searchPatients } from "@/db/queries/patients";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
+import { tenantDb } from "@/db/tenant-db";
 
 const TODAY = "2026-07-18";
 
 export async function searchAction(query: string) {
-  return searchPatients(await getActiveClinicId(), query);
+  /* Patient search reads through RLS (prd-real-auth.md Phase A) — this is
+     the one path that takes arbitrary operator input, so it is the least
+     comfortable place to rely on a hand-written filter alone. */
+  const clinicId = await getActiveClinicId();
+  return tenantDb((tx) => searchPatients(clinicId, query, tx));
 }
 
 export async function issueTokenAction(

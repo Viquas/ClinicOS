@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import {
   consultations,
   doctors,
@@ -75,8 +76,9 @@ const livePatient = (clinicId: string) =>
 
 export async function listPatients(
   clinicId: string,
+  tx: Executor = db,
 ): Promise<PatientSummary[]> {
-  const rows = await db
+  const rows = await tx
     .select(summaryColumns)
     .from(patients)
     .where(livePatient(clinicId))
@@ -88,11 +90,12 @@ export async function listPatients(
 export async function searchPatients(
   clinicId: string,
   query: string,
+  tx: Executor = db,
 ): Promise<PatientSummary[]> {
   const term = query.trim();
   if (term.length < 2) return [];
 
-  const rows = await db
+  const rows = await tx
     .select(summaryColumns)
     .from(patients)
     .where(
@@ -113,8 +116,9 @@ export async function searchPatients(
 export async function getPatient(
   clinicId: string,
   patientId: string,
+  tx: Executor = db,
 ): Promise<PatientSummary | null> {
-  const [row] = await db
+  const [row] = await tx
     .select(summaryColumns)
     .from(patients)
     .where(and(eq(patients.clinicId, clinicId), eq(patients.id, patientId)))
@@ -127,8 +131,9 @@ export async function getPatient(
 export async function getFamily(
   clinicId: string,
   phone: string,
+  tx: Executor = db,
 ): Promise<PatientSummary[]> {
-  const rows = await db
+  const rows = await tx
     .select(summaryColumns)
     .from(patients)
     .where(and(livePatient(clinicId), eq(patients.phone, phone)))
@@ -159,8 +164,9 @@ export type TimelineEntry = {
 export async function getPatientTimeline(
   clinicId: string,
   patientId: string,
+  tx: Executor = db,
 ): Promise<TimelineEntry[]> {
-  const rows = await db
+  const rows = await tx
     .select({
       visitId: visits.id,
       visitDate: visits.visitDate,
