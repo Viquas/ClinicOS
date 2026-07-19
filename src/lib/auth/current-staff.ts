@@ -1,6 +1,10 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { resolveStaffIdentity, type StaffIdentity } from "@/db/queries/staff";
+import {
+  resolveFallbackStaff,
+  resolveStaffIdentity,
+  type StaffIdentity,
+} from "@/db/queries/staff";
 
 /**
  * Who is using this device right now (§7.12 fast user-switching).
@@ -20,25 +24,28 @@ import { resolveStaffIdentity, type StaffIdentity } from "@/db/queries/staff";
  */
 const COOKIE_NAME = "clinicos_active_staff_id";
 
-/* Dr. Sameera Rahman — owner + doctor — so a fresh device with no cookie set
-   sees the full app rather than an artificially restricted one. */
-const DEFAULT_STAFF_ID = "22222222-0000-0000-0000-000000000001";
-
 export async function getCurrentStaff(clinicId: string): Promise<StaffIdentity> {
   const cookieStore = await cookies();
-  const staffId = cookieStore.get(COOKIE_NAME)?.value ?? DEFAULT_STAFF_ID;
+  const staffId = cookieStore.get(COOKIE_NAME)?.value;
 
-  const identity = await resolveStaffIdentity(clinicId, staffId);
-  if (identity) return identity;
+  if (staffId) {
+    const identity = await resolveStaffIdentity(clinicId, staffId);
+    if (identity) return identity;
+  }
 
-  /* Cookie pointed at a staff id that no longer resolves — deactivated,
-     archived, or stale after a reseed. Fall back rather than crashing the
-     whole app chrome over a stale cookie. */
-  const fallback = await resolveStaffIdentity(clinicId, DEFAULT_STAFF_ID);
+  /*
+   * No cookie (fresh device), or it pointed at a staff id that no longer
+   * resolves — deactivated, archived, or stale after a reseed. Fall back to
+   * an active owner (else any active staff) rather than crashing the whole
+   * app chrome. This used to fall back to one hardcoded staff id, which
+   * would have bricked every device in the clinic the day that specific
+   * person was deactivated.
+   */
+  const fallback = await resolveFallbackStaff(clinicId);
   if (fallback) return fallback;
 
   throw new Error(
-    "No staff record resolves for this clinic — has it been seeded?",
+    "No active staff resolves for this clinic — has it been seeded?",
   );
 }
 

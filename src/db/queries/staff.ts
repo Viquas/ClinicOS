@@ -106,6 +106,52 @@ export async function resolveStaffIdentity(
   };
 }
 
+/**
+ * Who a device should act as when its cookie identity stops resolving —
+ * stale after a reseed, or the staff member was deactivated mid-session.
+ *
+ * Prefers an active owner (the person who can fix whatever went wrong),
+ * falling back to any active staff. Returns null only for a clinic with no
+ * active staff at all, which is not a recoverable UI state anyway. This
+ * replaced a hardcoded default staff id that would have crashed every
+ * device in the clinic the day that one person was deactivated.
+ */
+export async function resolveFallbackStaff(
+  clinicId: string,
+): Promise<StaffIdentity | null> {
+  const rows = await db
+    .select({
+      id: staff.id,
+      name: staff.name,
+      roles: staff.roles,
+      createdAt: staff.createdAt,
+      doctorId: doctors.id,
+      specialty: doctors.specialty,
+    })
+    .from(staff)
+    .leftJoin(doctors, eq(doctors.staffId, staff.id))
+    .where(
+      and(
+        eq(staff.clinicId, clinicId),
+        eq(staff.isActive, true),
+        isNull(staff.archivedAt),
+      ),
+    )
+    .orderBy(staff.createdAt);
+
+  const pick =
+    rows.find((r) => (r.roles ?? []).includes("owner")) ?? rows[0];
+  if (!pick) return null;
+
+  return {
+    id: pick.id,
+    name: pick.name,
+    roles: pick.roles ?? [],
+    doctorId: pick.doctorId,
+    specialty: pick.specialty,
+  };
+}
+
 export type AuditRow = {
   id: string;
   at: Date;

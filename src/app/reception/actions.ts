@@ -8,10 +8,10 @@ import {
   type RegisterResult,
 } from "@/db/mutations/issue-token";
 import { searchPatients } from "@/db/queries/patients";
+import { getCurrentStaff } from "@/lib/auth/current-staff";
 
-/* Until auth is wired these come from the session; see queue/page.tsx. */
+/* Until auth is wired, the clinic is fixed to the seeded scenario. */
 const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
-const ACTOR_STAFF_ID = "22222222-0000-0000-0000-000000000004";
 const TODAY = "2026-07-18";
 
 export async function searchAction(query: string) {
@@ -23,13 +23,15 @@ export async function issueTokenAction(
   doctorId: string,
   isPriority = false,
 ): Promise<IssueResult> {
+  const currentStaff = await getCurrentStaff(CLINIC_ID);
+
   const result = await issueToken({
     clinicId: CLINIC_ID,
     patientId,
     doctorId,
     onDate: TODAY,
     isPriority,
-    actorStaffId: ACTOR_STAFF_ID,
+    actorStaffId: currentStaff.id,
   });
 
   if (result.ok) {
@@ -49,9 +51,11 @@ export async function registerPatientAction(input: {
   ageYears?: number | null;
   guardianName?: string | null;
 }): Promise<RegisterResult> {
+  const currentStaff = await getCurrentStaff(CLINIC_ID);
+
   const result = await registerPatient({
     clinicId: CLINIC_ID,
-    actorStaffId: ACTOR_STAFF_ID,
+    actorStaffId: currentStaff.id,
     ...input,
   });
 

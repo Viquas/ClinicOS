@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { recordVitals, type RecordVitalsResult } from "@/db/mutations/record-vitals";
+import { getCurrentStaff } from "@/lib/auth/current-staff";
 
-/* Until auth is wired these come from the session; see queue/page.tsx. */
+/* Until auth is wired, the clinic is fixed to the seeded scenario. */
 const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
-const ACTOR_STAFF_ID = "22222222-0000-0000-0000-000000000003"; // Latha Bai, nurse
 
 export async function recordVitalsAction({
   visitId,
@@ -18,11 +18,13 @@ export async function recordVitalsAction({
   values: Record<string, number>;
   skipped: string[];
 }): Promise<RecordVitalsResult> {
+  const currentStaff = await getCurrentStaff(CLINIC_ID);
+
   const result = await recordVitals({
     clinicId: CLINIC_ID,
     visitId,
     tokenId,
-    actorStaffId: ACTOR_STAFF_ID,
+    actorStaffId: currentStaff.id,
     values,
     skipped,
   });

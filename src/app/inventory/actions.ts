@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { addPurchase, type AddPurchaseResult } from "@/db/mutations/add-purchase";
+import { getCurrentStaff } from "@/lib/auth/current-staff";
 
-/* Until auth is wired these come from the session; see queue/page.tsx. */
+/* Until auth is wired, the clinic is fixed to the seeded scenario. */
 const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
-const ACTOR_STAFF_ID = "22222222-0000-0000-0000-000000000004";
 const TODAY = "2026-07-18";
 
 export async function addPurchaseAction(input: {
@@ -17,9 +17,11 @@ export async function addPurchaseAction(input: {
   supplierName?: string | null;
   invoiceNo?: string | null;
 }): Promise<AddPurchaseResult> {
+  const currentStaff = await getCurrentStaff(CLINIC_ID);
+
   const result = await addPurchase({
     clinicId: CLINIC_ID,
-    actorStaffId: ACTOR_STAFF_ID,
+    actorStaffId: currentStaff.id,
     today: TODAY,
     ...input,
   });

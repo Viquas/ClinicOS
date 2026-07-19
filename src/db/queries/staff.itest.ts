@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { getAuditLog, getStaff, resolveStaffIdentity } from "./staff";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { staff } from "@/db/schema";
+import {
+  getAuditLog,
+  getStaff,
+  resolveFallbackStaff,
+  resolveStaffIdentity,
+} from "./staff";
 
 const CLINIC = "11111111-1111-1111-1111-111111111111";
 const OTHER_CLINIC = "99999999-9999-9999-9999-999999999999";
@@ -69,6 +77,31 @@ describe("resolveStaffIdentity", () => {
     expect(
       await resolveStaffIdentity(CLINIC, "00000000-0000-0000-0000-000000000000"),
     ).toBeNull();
+  });
+});
+
+describe("resolveFallbackStaff", () => {
+  it("prefers an active owner", async () => {
+    const fallback = await resolveFallbackStaff(CLINIC);
+    expect(fallback?.name).toBe("Dr. Sameera Rahman");
+    expect(fallback?.roles).toContain("owner");
+  });
+
+  it("skips a deactivated owner rather than crashing on them", async () => {
+    await db.update(staff).set({ isActive: false }).where(eq(staff.id, SAMEERA));
+    try {
+      const fallback = await resolveFallbackStaff(CLINIC);
+      /* Someone active must still resolve, and not the deactivated owner —
+         this is the exact scenario the old hardcoded default crashed on. */
+      expect(fallback).not.toBeNull();
+      expect(fallback?.id).not.toBe(SAMEERA);
+    } finally {
+      await db.update(staff).set({ isActive: true }).where(eq(staff.id, SAMEERA));
+    }
+  });
+
+  it("returns null for a clinic with no staff", async () => {
+    expect(await resolveFallbackStaff(OTHER_CLINIC)).toBeNull();
   });
 });
 

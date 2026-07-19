@@ -2,19 +2,24 @@
 
 import { revalidatePath } from "next/cache";
 import { recordVaccineDose } from "@/db/mutations/record-vaccine-dose";
+import { getCurrentStaff } from "@/lib/auth/current-staff";
 
-/* Until auth is wired these come from the session; see queue/page.tsx. */
+/* Until auth is wired, the clinic is fixed to the seeded scenario. */
 const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
-const ACTOR_STAFF_ID = "22222222-0000-0000-0000-000000000003"; // Latha Bai, nurse
+/* The supervising doctor for a nurse-given dose — stays a clinic default
+   until a doctor picker lands on the vaccination screen. Distinct from the
+   ACTOR, which must be whoever is actually signed in. */
 const DEFAULT_DOCTOR_ID = "33333333-0000-0000-0000-000000000001"; // Dr Sameera Rahman, pediatrics
 
 export async function recordDoseAction(patientId: string, doseId: string) {
+  const currentStaff = await getCurrentStaff(CLINIC_ID);
+
   const result = await recordVaccineDose({
     clinicId: CLINIC_ID,
     patientId,
     doseId,
     doctorId: DEFAULT_DOCTOR_ID,
-    actorStaffId: ACTOR_STAFF_ID,
+    actorStaffId: currentStaff.id,
   });
 
   if (result.ok) {
