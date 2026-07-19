@@ -22,6 +22,7 @@ export type StaffRow = {
   /* Present and registration number for doctors, so the "cannot prescribe"
      state (§9.2) is visible in the directory. */
   registrationNo: string | null;
+  specialty: string | null;
   isDoctor: boolean;
 };
 
@@ -35,6 +36,7 @@ export async function getStaff(clinicId: string): Promise<StaffRow[]> {
       roles: staff.roles,
       isActive: staff.isActive,
       registrationNo: doctors.registrationNo,
+      specialty: doctors.specialty,
     })
     .from(staff)
     /* Left join: most staff are not doctors, and must still be listed. */
@@ -50,6 +52,7 @@ export async function getStaff(clinicId: string): Promise<StaffRow[]> {
     roles: r.roles ?? [],
     isActive: r.isActive,
     registrationNo: r.registrationNo,
+    specialty: r.specialty,
     isDoctor: (r.roles ?? []).includes("doctor"),
   }));
 }

@@ -24,6 +24,7 @@ export default async function SettingsPage() {
     <SettingsScreen
       staff={staff}
       currentStaffId={currentStaff.id}
+      currentStaffRoles={currentStaff.roles}
       audit={audit.map((a) => ({
         id: a.id,
         /* Serialise the timestamp for the client boundary. */
