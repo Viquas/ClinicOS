@@ -19,6 +19,8 @@ import {
   type UpdateStaffDetailsResult,
 } from "@/db/mutations/update-staff-details";
 import { getCurrentStaff } from "@/lib/auth/current-staff";
+import { checkIn, checkOut } from "@/db/mutations/record-attendance";
+import { clinicToday } from "@/lib/clinic-date";
 import { tenantDb } from "@/db/tenant-db";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
 import type { StaffRole } from "@/lib/auth/claims";
@@ -140,5 +142,34 @@ export async function updateClinicProfileAction(input: {
     /* The nav header prints the clinic name, so every screen is stale. */
     revalidatePath("/", "layout");
   }
+  return result;
+}
+
+/**
+ * Attendance is owner-or-self, so this resolves the identity rather than
+ * demanding staff:manage — a nurse tapping herself in must not need the owner.
+ */
+export async function recordAttendanceAction(input: {
+  staffId: string;
+  direction: "in" | "out";
+}) {
+  const clinicId = await getActiveClinicId();
+  const currentStaff = await getCurrentStaff(clinicId);
+
+  const args = {
+    clinicId,
+    staffId: input.staffId,
+    actorStaffId: currentStaff.id,
+    actorIsOwner: currentStaff.roles.includes("owner"),
+    today: clinicToday(),
+  };
+
+  const result = await tenantDb((tx) =>
+    input.direction === "in"
+      ? checkIn({ ...args, executor: tx })
+      : checkOut({ ...args, executor: tx }),
+  );
+
+  if (result.ok) revalidatePath("/settings");
   return result;
 }

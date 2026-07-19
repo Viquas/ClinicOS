@@ -26,6 +26,7 @@ import { useState, useSyncExternalStore, useTransition } from "react";
 import {
   addStaffAction,
   setStaffActiveAction,
+  recordAttendanceAction,
   updateClinicProfileAction,
   updateStaffDetailsAction,
   updateStaffRolesAction,
@@ -40,6 +41,12 @@ type AuditEntry = {
 };
 
 type LastChange = { byName: string | null; at: string; reason: string } | null;
+
+type Attendance = {
+  isIn: boolean;
+  checkedInAt: string | null;
+  daysPresent: number;
+};
 
 type SwitchableClinic = {
   id: string;
@@ -64,6 +71,7 @@ export function SettingsScreen({
   switchableClinics,
   activeClinicId,
   lastChangeByStaffId,
+  attendanceByStaffId,
   audit,
 }: {
   staff: StaffRow[];
@@ -73,6 +81,7 @@ export function SettingsScreen({
   switchableClinics: SwitchableClinic[];
   activeClinicId: string;
   lastChangeByStaffId: Record<string, LastChange>;
+  attendanceByStaffId: Record<string, Attendance>;
   audit: AuditEntry[];
 }) {
   return (
@@ -86,6 +95,7 @@ export function SettingsScreen({
         switchableClinics={switchableClinics}
         activeClinicId={activeClinicId}
         lastChangeByStaffId={lastChangeByStaffId}
+        attendanceByStaffId={attendanceByStaffId}
         audit={audit}
       />
     </>
@@ -102,6 +112,7 @@ function Tabs({
   switchableClinics,
   activeClinicId,
   lastChangeByStaffId,
+  attendanceByStaffId,
   audit,
 }: {
   staff: StaffRow[];
@@ -111,6 +122,7 @@ function Tabs({
   switchableClinics: SwitchableClinic[];
   activeClinicId: string;
   lastChangeByStaffId: Record<string, LastChange>;
+  attendanceByStaffId: Record<string, Attendance>;
   audit: AuditEntry[];
 }) {
   const [tab, setTab] = useState<Tab>("clinic");
@@ -165,6 +177,7 @@ function Tabs({
           currentStaffId={currentStaffId}
           isOwner={currentStaffRoles.includes("owner")}
           lastChangeByStaffId={lastChangeByStaffId}
+          attendanceByStaffId={attendanceByStaffId}
         />
       ) : null}
       {tab === "audit" ? <AuditTab audit={audit} /> : null}
@@ -311,11 +324,13 @@ function StaffTab({
   currentStaffId,
   isOwner,
   lastChangeByStaffId,
+  attendanceByStaffId,
 }: {
   staff: StaffRow[];
   currentStaffId: string;
   isOwner: boolean;
   lastChangeByStaffId: Record<string, LastChange>;
+  attendanceByStaffId: Record<string, Attendance>;
 }) {
   const [editing, setEditing] = useState<StaffRow | null>(null);
   const [editingDetails, setEditingDetails] = useState<StaffRow | null>(null);
@@ -403,6 +418,12 @@ function StaffTab({
               ) : null}
             </div>
 
+            <AttendanceRow
+              member={member}
+              attendance={attendanceByStaffId[member.id]}
+              canRecord={isOwner || member.id === currentStaffId}
+            />
+
             {lastChangeByStaffId[member.id] ? (
               <p className="mt-2 text-[12px] text-ink-secondary">
                 Last changed by {lastChangeByStaffId[member.id]!.byName ?? "unknown"} on{" "}
@@ -461,6 +482,75 @@ function StaffTab({
       ) : null}
       {adding ? <AddStaffDialog onClose={() => setAdding(false)} /> : null}
     </>
+  );
+}
+
+/**
+ * Presence for one staff member (§7.8).
+ *
+ * Days present, not hours worked: this is a small clinic wanting to know who
+ * was in this month, and hours inferred from two taps would be precise enough
+ * to be trusted and wrong enough to be unfair.
+ */
+function AttendanceRow({
+  member,
+  attendance,
+  canRecord,
+}: {
+  member: StaffRow;
+  attendance: Attendance | undefined;
+  canRecord: boolean;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  if (!member.isActive || !attendance) return null;
+
+  const record = (direction: "in" | "out") => {
+    setError(null);
+    startTransition(async () => {
+      const result = await recordAttendanceAction({
+        staffId: member.id,
+        direction,
+      });
+      if (!result.ok) setError(result.error);
+    });
+  };
+
+  return (
+    <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-hairline pt-2.5">
+      <StatusPill tone={attendance.isIn ? "success" : "neutral"}>
+        {attendance.isIn ? "In" : "Not in"}
+      </StatusPill>
+      {attendance.checkedInAt ? (
+        <span className="text-[13px] text-ink-secondary">
+          since{" "}
+          {new Date(attendance.checkedInAt).toLocaleTimeString("en-IN", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone: "Asia/Kolkata",
+          })}
+        </span>
+      ) : null}
+      <span className="text-[13px] text-ink-secondary">
+        {attendance.daysPresent} day{attendance.daysPresent === 1 ? "" : "s"} this month
+      </span>
+
+      {canRecord ? (
+        <button
+          disabled={isPending}
+          onClick={() => record(attendance.isIn ? "out" : "in")}
+          className="ml-auto text-[13px] font-semibold text-accent disabled:opacity-40"
+        >
+          {attendance.isIn ? "Check out" : "Check in"}
+        </button>
+      ) : null}
+
+      {error ? (
+        <span className="w-full text-[13px] font-semibold text-alert">{error}</span>
+      ) : null}
+    </div>
   );
 }
 

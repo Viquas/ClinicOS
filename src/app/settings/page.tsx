@@ -1,4 +1,9 @@
+import {
+  getMonthlyPresence,
+  getTodaysAttendance,
+} from "@/db/queries/attendance";
 import { getClinicProfile, getSwitchableClinics } from "@/db/queries/clinic";
+import { clinicMonthBounds, clinicToday } from "@/lib/clinic-date";
 import { getRecordRevisions } from "@/db/queries/revisions";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { getAuditLog, getStaff } from "@/db/queries/staff";
@@ -23,6 +28,33 @@ export default async function SettingsPage() {
     getClinicProfile(clinicId),
   ]);
   const switchableClinics = await getSwitchableClinics();
+
+  /* Attendance for the staff tab: who is in right now, and how many days
+     each person has been in this month (§7.8). */
+  const today = clinicToday();
+  const { start, end } = clinicMonthBounds();
+  const [todaysAttendance, monthlyPresence] = await Promise.all([
+    getTodaysAttendance(clinicId, today),
+    getMonthlyPresence(clinicId, start, end),
+  ]);
+
+  const attendanceByStaffId = Object.fromEntries(
+    staff.map((m) => {
+      const open = todaysAttendance.find(
+        (a) => a.staffId === m.id && a.checkOutAt === null,
+      );
+      const anyToday = todaysAttendance.find((a) => a.staffId === m.id);
+      return [
+        m.id,
+        {
+          isIn: Boolean(open),
+          checkedInAt: (open ?? anyToday)?.checkInAt.toISOString() ?? null,
+          daysPresent:
+            monthlyPresence.find((p) => p.staffId === m.id)?.daysPresent ?? 0,
+        },
+      ];
+    }),
+  );
 
   /* Latest role/active change per member (P1 §7.8 polish) — the staff list
      is small, so one lookup per member stays cheap. */
@@ -53,6 +85,7 @@ export default async function SettingsPage() {
       switchableClinics={switchableClinics}
       activeClinicId={clinicId}
       lastChangeByStaffId={lastChangeByStaffId}
+      attendanceByStaffId={attendanceByStaffId}
       audit={audit.map((a) => ({
         id: a.id,
         /* Serialise the timestamp for the client boundary. */
