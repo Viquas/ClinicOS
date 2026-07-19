@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { auditLog, procedureTasks, procedures, visits } from "@/db/schema";
 import { SCHEDULE } from "@/lib/clinical/vaccines";
 
@@ -32,6 +33,7 @@ export async function recordVaccineDose({
   doctorId,
   actorStaffId,
   givenOn,
+  executor = db,
 }: {
   clinicId: string;
   patientId: string;
@@ -40,12 +42,15 @@ export async function recordVaccineDose({
   actorStaffId: string | null;
   /** ISO date the dose was actually given — defaults to today if omitted. */
   givenOn?: string;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<RecordDoseResult> {
   const dose = SCHEDULE.find((d) => d.id === doseId);
   if (!dose) return { ok: false, error: "Unknown vaccine dose" };
 
   try {
-    return await db.transaction(async (tx) => {
+    return await executor.transaction(async (tx) => {
       const [matched] = await tx
         .select({ id: procedures.id })
         .from(procedures)

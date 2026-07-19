@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, max } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { auditLog, patients, tokens, visits, waMessages } from "@/db/schema";
 
 /**
@@ -52,6 +53,7 @@ export async function issueToken({
   onDate,
   isPriority = false,
   actorStaffId,
+  executor = db,
 }: {
   clinicId: string;
   patientId: string;
@@ -59,6 +61,9 @@ export async function issueToken({
   onDate: string;
   isPriority?: boolean;
   actorStaffId: string | null;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<IssueResult> {
   const [patient] = await db
     .select({ id: patients.id, name: patients.name, phone: patients.phone })
@@ -70,7 +75,7 @@ export async function issueToken({
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      return await db.transaction(async (tx) => {
+      return await executor.transaction(async (tx) => {
         const [row] = await tx
           .select({ highest: max(tokens.number) })
           .from(tokens)
@@ -166,6 +171,7 @@ export async function registerPatient({
   ageYears,
   guardianName,
   actorStaffId,
+  executor = db,
 }: {
   clinicId: string;
   name: string;
@@ -175,6 +181,9 @@ export async function registerPatient({
   ageYears?: number | null;
   guardianName?: string | null;
   actorStaffId: string | null;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<RegisterResult> {
   const trimmedName = name.trim();
   const digits = phone.replace(/\D/g, "");
@@ -206,7 +215,7 @@ export async function registerPatient({
       })
       .returning({ id: patients.id });
 
-    await db.insert(auditLog).values({
+    await executor.insert(auditLog).values({
       clinicId,
       actorStaffId,
       action: "patient_registered",

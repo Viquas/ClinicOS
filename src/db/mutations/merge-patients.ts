@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { auditLog, patients, visits } from "@/db/schema";
 
 /**
@@ -28,18 +29,22 @@ export async function mergePatientRecords({
   actorStaffId,
   survivorId,
   duplicateId,
+  executor = db,
 }: {
   clinicId: string;
   actorStaffId: string | null;
   survivorId: string;
   duplicateId: string;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<MergeResult> {
   if (survivorId === duplicateId) {
     return { ok: false, error: "Cannot merge a record into itself" };
   }
 
   try {
-    return await db.transaction(async (tx) => {
+    return await executor.transaction(async (tx) => {
       const rows = await tx
         .select({
           id: patients.id,

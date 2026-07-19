@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { auditLog, mrVisits } from "@/db/schema";
 
 /**
@@ -16,14 +17,18 @@ export type MrResult = { ok: true } | { ok: false; error: string };
 export async function checkInRep({
   clinicId,
   mrVisitId,
+  executor = db,
 }: {
   clinicId: string;
   mrVisitId: string;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<MrResult> {
   /* Only a booked (not yet checked-in) visit can be checked in — the WHERE
      clause is the guard, not a check-then-write, so two front-desk taps at
      once cannot both succeed and silently reset the wait timer. */
-  const result = await db
+  const result = await executor
     .update(mrVisits)
     .set({ checkedInAt: new Date(), updatedAt: new Date() })
     .where(
@@ -46,13 +51,17 @@ export async function markRepSeen({
   mrVisitId,
   actorStaffId,
   doctorNotes,
+  executor = db,
 }: {
   clinicId: string;
   mrVisitId: string;
   actorStaffId: string | null;
   doctorNotes?: string;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<MrResult> {
-  return db.transaction(async (tx) => {
+  return executor.transaction(async (tx) => {
     const [visit] = await tx
       .select({ seenAt: mrVisits.seenAt, checkedInAt: mrVisits.checkedInAt })
       .from(mrVisits)
@@ -99,11 +108,15 @@ export async function logWalkInRep({
   repId,
   doctorId,
   actorStaffId,
+  executor = db,
 }: {
   clinicId: string;
   repId: string;
   doctorId: string;
   actorStaffId: string | null;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<LogWalkInResult> {
   try {
     const [visit] = await db
@@ -111,7 +124,7 @@ export async function logWalkInRep({
       .values({ clinicId, repId, doctorId, checkedInAt: new Date() })
       .returning({ id: mrVisits.id });
 
-    await db.insert(auditLog).values({
+    await executor.insert(auditLog).values({
       clinicId,
       actorStaffId,
       action: "mr_walkin_logged",

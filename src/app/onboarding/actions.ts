@@ -1,7 +1,10 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { createClinic, type CreateClinicResult } from "@/db/mutations/create-clinic";
+import {
+  createClinic,
+  type CreateClinicResult,
+} from "@/db/mutations/create-clinic";
 import { ACTIVE_CLINIC_COOKIE } from "@/lib/auth/current-clinic";
 import { CURRENT_STAFF_COOKIE } from "@/lib/auth/current-staff";
 

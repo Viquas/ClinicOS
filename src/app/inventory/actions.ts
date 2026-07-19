@@ -1,7 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addPurchase, type AddPurchaseResult } from "@/db/mutations/add-purchase";
+import {
+  addPurchase,
+  type AddPurchaseResult,
+} from "@/db/mutations/add-purchase";
+import { tenantDb } from "@/db/tenant-db";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
@@ -16,15 +20,19 @@ export async function addPurchaseAction(input: {
   supplierName?: string | null;
   invoiceNo?: string | null;
 }): Promise<AddPurchaseResult> {
-  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "inventory:purchase");
+  const clinicId = await getActiveClinicId();
+  const auth = await requireCurrentStaffCan(clinicId, "inventory:purchase");
   if (!auth.ok) return auth;
 
-  const result = await addPurchase({
-    clinicId: await getActiveClinicId(),
-    actorStaffId: auth.staff.id,
-    today: TODAY,
-    ...input,
-  });
+  const result = await tenantDb((tx) =>
+    addPurchase({
+      clinicId,
+      actorStaffId: auth.staff.id,
+      today: TODAY,
+      ...input,
+      executor: tx,
+    }),
+  );
 
   if (result.ok) {
     revalidatePath("/inventory");

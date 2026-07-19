@@ -27,7 +27,8 @@ export async function issueTokenAction(
   doctorId: string,
   isPriority = false,
 ): Promise<IssueResult> {
-  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "patient:register");
+  const clinicId = await getActiveClinicId();
+  const auth = await requireCurrentStaffCan(clinicId, "patient:register");
   if (!auth.ok) return auth;
 
   const result = await issueToken({
@@ -56,7 +57,8 @@ export async function registerPatientAction(input: {
   ageYears?: number | null;
   guardianName?: string | null;
 }): Promise<RegisterResult> {
-  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "patient:register");
+  const clinicId = await getActiveClinicId();
+  const auth = await requireCurrentStaffCan(clinicId, "patient:register");
   if (!auth.ok) return auth;
 
   const result = await registerPatient({

@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { auditLog, tokens, vitals } from "@/db/schema";
 
 export type RecordVitalsResult = { ok: true } | { ok: false; error: string };
@@ -21,6 +22,7 @@ export async function recordVitals({
   actorStaffId,
   values,
   skipped,
+  executor = db,
 }: {
   clinicId: string;
   visitId: string;
@@ -28,12 +30,15 @@ export async function recordVitals({
   actorStaffId: string | null;
   values: Record<string, number | string>;
   skipped: string[];
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<RecordVitalsResult> {
   if (Object.keys(values).length === 0 && skipped.length === 0) {
     return { ok: false, error: "Record or skip at least one measurement" };
   }
 
-  return db.transaction(async (tx) => {
+  return executor.transaction(async (tx) => {
     const result = await tx
       .update(tokens)
       .set({ state: "vitals_done", updatedAt: new Date() })

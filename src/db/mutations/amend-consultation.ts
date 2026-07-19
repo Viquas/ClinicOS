@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { auditLog, consultations, doctors, recordRevisions } from "@/db/schema";
 import type { StaffRole } from "@/lib/auth/claims";
 
@@ -30,6 +31,7 @@ export async function amendConsultation({
   actorRoles,
   reason,
   edits,
+  executor = db,
 }: {
   clinicId: string;
   visitId: string;
@@ -37,13 +39,16 @@ export async function amendConsultation({
   actorRoles: StaffRole[];
   reason: string;
   edits: ConsultationEdits;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<AmendConsultationResult> {
   const trimmedReason = reason.trim();
   if (trimmedReason.length < 4) {
     return { ok: false, error: "A reason is required to amend this record" };
   }
 
-  return db.transaction(async (tx) => {
+  return executor.transaction(async (tx) => {
     const [current] = await tx
       .select({
         diagnosis: consultations.diagnosis,

@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { auditLog, doctors, recordRevisions, staff } from "@/db/schema";
 import type { StaffRole } from "@/lib/auth/claims";
 import { SPECIALTY_REGISTRY } from "@/lib/clinical/specialties";
@@ -45,6 +46,7 @@ export async function updateStaffDetails({
   actorRoles,
   reason,
   edits,
+  executor = db,
 }: {
   clinicId: string;
   staffId: string;
@@ -52,6 +54,9 @@ export async function updateStaffDetails({
   actorRoles: StaffRole[];
   reason: string;
   edits: StaffDetailEdits;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<UpdateStaffDetailsResult> {
   const isOwner = actorRoles.includes("owner");
   const isSelf = actorStaffId === staffId;
@@ -78,7 +83,7 @@ export async function updateStaffDetails({
     return { ok: false, error: "Pick a specialty from the list" };
   }
 
-  return db.transaction(async (tx) => {
+  return executor.transaction(async (tx) => {
     const [current] = await tx
       .select({
         name: staff.name,

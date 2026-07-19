@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { auditLog, batches, inventoryItems, stockMovements } from "@/db/schema";
 
 /**
@@ -32,6 +33,7 @@ export async function addPurchase({
   invoiceNo,
   actorStaffId,
   today,
+  executor = db,
 }: {
   clinicId: string;
   itemId: string;
@@ -43,6 +45,9 @@ export async function addPurchase({
   invoiceNo?: string | null;
   actorStaffId: string | null;
   today: string;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<AddPurchaseResult> {
   if (!batchNo.trim()) {
     return { ok: false, error: "Enter the batch number" };
@@ -60,7 +65,7 @@ export async function addPurchase({
   }
 
   try {
-    return await db.transaction(async (tx) => {
+    return await executor.transaction(async (tx) => {
       const [item] = await tx
         .select({ id: inventoryItems.id })
         .from(inventoryItems)

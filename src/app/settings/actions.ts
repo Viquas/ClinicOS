@@ -19,10 +19,10 @@ import {
   type UpdateStaffDetailsResult,
 } from "@/db/mutations/update-staff-details";
 import { getCurrentStaff } from "@/lib/auth/current-staff";
+import { tenantDb } from "@/db/tenant-db";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
 import type { StaffRole } from "@/lib/auth/claims";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
-
 
 export async function updateStaffRolesAction(input: {
   staffId: string;
@@ -30,15 +30,19 @@ export async function updateStaffRolesAction(input: {
   reason: string;
   specialty?: string;
 }): Promise<ManageStaffResult> {
-  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "staff:manage");
+  const clinicId = await getActiveClinicId();
+  const auth = await requireCurrentStaffCan(clinicId, "staff:manage");
   if (!auth.ok) return auth;
 
-  const result = await updateStaffRoles({
-    clinicId: await getActiveClinicId(),
-    actorStaffId: auth.staff.id,
-    actorRoles: auth.staff.roles,
-    ...input,
-  });
+  const result = await tenantDb((tx) =>
+    updateStaffRoles({
+      clinicId,
+      actorStaffId: auth.staff.id,
+      actorRoles: auth.staff.roles,
+      ...input,
+      executor: tx,
+    }),
+  );
 
   if (result.ok) {
     revalidatePath("/settings");
@@ -54,7 +58,8 @@ export async function addStaffAction(input: {
   qualification?: string | null;
   specialty?: string;
 }): Promise<AddStaffResult> {
-  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "staff:manage");
+  const clinicId = await getActiveClinicId();
+  const auth = await requireCurrentStaffCan(clinicId, "staff:manage");
   if (!auth.ok) return auth;
 
   const result = await addStaff({
@@ -100,7 +105,8 @@ export async function setStaffActiveAction(input: {
   active: boolean;
   reason: string;
 }): Promise<ManageStaffResult> {
-  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "staff:manage");
+  const clinicId = await getActiveClinicId();
+  const auth = await requireCurrentStaffCan(clinicId, "staff:manage");
   if (!auth.ok) return auth;
 
   const result = await setStaffActive({

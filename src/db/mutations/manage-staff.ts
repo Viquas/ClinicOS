@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { auditLog, doctors, recordRevisions, staff } from "@/db/schema";
 import type { StaffRole } from "@/lib/auth/claims";
 import { SPECIALTY_REGISTRY } from "@/lib/clinical/specialties";
@@ -63,6 +64,7 @@ export async function updateStaffRoles({
   reason,
   roles,
   specialty,
+  executor = db,
 }: {
   clinicId: string;
   staffId: string;
@@ -72,6 +74,9 @@ export async function updateStaffRoles({
   roles: StaffRole[];
   /** Required when granting the doctor role to someone without a doctors row. */
   specialty?: string;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<ManageStaffResult> {
   const ownerRefusal = assertOwnerActor(actorRoles);
   if (ownerRefusal) return { ok: false, error: ownerRefusal };
@@ -87,7 +92,7 @@ export async function updateStaffRoles({
     };
   }
 
-  return db.transaction(async (tx) => {
+  return executor.transaction(async (tx) => {
     const activeStaff = await lockActiveStaff(tx, clinicId);
     const target = activeStaff.find((s) => s.id === staffId);
 
@@ -179,6 +184,7 @@ export async function addStaff({
   roles,
   qualification,
   specialty,
+  executor = db,
 }: {
   clinicId: string;
   actorStaffId: string;
@@ -188,6 +194,9 @@ export async function addStaff({
   roles: StaffRole[];
   qualification?: string | null;
   specialty?: string;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<AddStaffResult> {
   const ownerRefusal = assertOwnerActor(actorRoles);
   if (ownerRefusal) return { ok: false, error: ownerRefusal };
@@ -207,7 +216,7 @@ export async function addStaff({
     return { ok: false, error: "A doctor needs a specialty" };
   }
 
-  return db.transaction(async (tx) => {
+  return executor.transaction(async (tx) => {
     const [row] = await tx
       .insert(staff)
       .values({
@@ -245,6 +254,7 @@ export async function setStaffActive({
   actorRoles,
   active,
   reason,
+  executor = db,
 }: {
   clinicId: string;
   staffId: string;
@@ -252,6 +262,9 @@ export async function setStaffActive({
   actorRoles: StaffRole[];
   active: boolean;
   reason: string;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<ManageStaffResult> {
   const ownerRefusal = assertOwnerActor(actorRoles);
   if (ownerRefusal) return { ok: false, error: ownerRefusal };
@@ -266,7 +279,7 @@ export async function setStaffActive({
     return { ok: false, error: "You can't deactivate yourself" };
   }
 
-  return db.transaction(async (tx) => {
+  return executor.transaction(async (tx) => {
     const activeStaff = await lockActiveStaff(tx, clinicId);
 
     const [target] = await tx

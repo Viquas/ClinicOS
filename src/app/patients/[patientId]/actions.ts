@@ -15,7 +15,6 @@ import { tenantDb } from "@/db/tenant-db";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
-
 export async function updatePatientAction({
   patientId,
   reason,
@@ -25,12 +24,12 @@ export async function updatePatientAction({
   reason: string;
   edits: PatientEdits;
 }): Promise<UpdatePatientResult> {
+  const clinicId = await getActiveClinicId();
   /* Demographics corrections are front-desk work (§7.1) — same permission
      as registering the patient in the first place. */
-  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "patient:register");
+  const auth = await requireCurrentStaffCan(clinicId, "patient:register");
   if (!auth.ok) return auth;
 
-  const clinicId = await getActiveClinicId();
   const result = await tenantDb((tx) =>
     updatePatientDemographics({
       clinicId,
@@ -60,9 +59,10 @@ export async function amendConsultationAction({
   reason: string;
   edits: ConsultationEdits;
 }): Promise<AmendConsultationResult> {
+  const clinicId = await getActiveClinicId();
   /* Amending is consultation-writing; the mutation additionally restricts
      it to the authoring doctor or the owner. */
-  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "consultation:write");
+  const auth = await requireCurrentStaffCan(clinicId, "consultation:write");
   if (!auth.ok) return auth;
 
   const result = await amendConsultation({

@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import {
   auditLog,
   consultations,
@@ -48,6 +49,7 @@ export async function recordConsultation({
   advice,
   followUpDate,
   lines,
+  executor = db,
 }: {
   clinicId: string;
   visitId: string;
@@ -58,12 +60,15 @@ export async function recordConsultation({
   advice: string | null;
   followUpDate: string | null;
   lines: PrescriptionLineInput[];
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<RecordConsultationResult> {
   if (!diagnosis.trim()) {
     return { ok: false, error: "A diagnosis is required to close the visit" };
   }
 
-  return db.transaction(async (tx) => {
+  return executor.transaction(async (tx) => {
     const result = await tx
       .update(tokens)
       .set({ state: "at_pharmacy", updatedAt: new Date() })

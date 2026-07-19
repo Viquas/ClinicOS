@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import {
   auditLog,
   batches,
@@ -46,6 +47,7 @@ export async function dispense({
   patient,
   doctor,
   asOf,
+  executor = db,
 }: {
   clinicId: string;
   visitId: string;
@@ -56,6 +58,9 @@ export async function dispense({
   patient: { id: string; name: string; address?: string | null };
   doctor: { name: string; registrationNo: string | null };
   asOf: Date;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<DispenseResult> {
   if (lines.length === 0) {
     return { ok: false, error: "Nothing to dispense" };
@@ -68,7 +73,7 @@ export async function dispense({
   const today = asOf.toISOString().slice(0, 10);
 
   try {
-    return await db.transaction(async (tx) => {
+    return await executor.transaction(async (tx) => {
       const dispensed: { batchNo: string; quantity: number }[] = [];
 
       for (const line of lines) {

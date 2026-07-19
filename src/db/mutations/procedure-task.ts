@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { auditLog, procedures, procedureTasks } from "@/db/schema";
 
 /**
@@ -23,12 +24,16 @@ export async function startTask({
   clinicId,
   taskId,
   actorStaffId,
+  executor = db,
 }: {
   clinicId: string;
   taskId: string;
   actorStaffId: string | null;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<TaskResult> {
-  const result = await db
+  const result = await executor
     .update(procedureTasks)
     .set({
       state: "in_progress",
@@ -57,16 +62,20 @@ export async function completeTask({
   taskId,
   actorStaffId,
   asOf,
+  executor = db,
 }: {
   clinicId: string;
   taskId: string;
   actorStaffId: string | null;
   asOf: Date;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<TaskResult> {
   const today = asOf.toISOString().slice(0, 10);
 
   try {
-    return await db.transaction(async (tx) => {
+    return await executor.transaction(async (tx) => {
       /*
        * FOR UPDATE on the task row itself, not just the batch: without this,
        * two concurrent completions of the same task both read state as

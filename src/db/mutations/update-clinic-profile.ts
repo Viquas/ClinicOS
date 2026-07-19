@@ -1,6 +1,7 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { auditLog, clinics, recordRevisions } from "@/db/schema";
 import type { StaffRole } from "@/lib/auth/claims";
 
@@ -39,12 +40,16 @@ export async function updateClinicProfile({
   actorRoles,
   reason,
   edits,
+  executor = db,
 }: {
   clinicId: string;
   actorStaffId: string;
   actorRoles: StaffRole[];
   reason: string;
   edits: ClinicProfileEdits;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<UpdateClinicProfileResult> {
   if (!actorRoles.includes("owner")) {
     return { ok: false, error: "Only the owner can change the clinic profile" };
@@ -60,7 +65,7 @@ export async function updateClinicProfile({
     return { ok: false, error: "Enter the clinic's name" };
   }
 
-  return db.transaction(async (tx) => {
+  return executor.transaction(async (tx) => {
     const [current] = await tx
       .select()
       .from(clinics)

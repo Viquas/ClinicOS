@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import {
   auditLog,
   billItems,
@@ -47,19 +48,23 @@ export async function recordBill({
   lines,
   mode,
   actorStaffId,
+  executor = db,
 }: {
   clinicId: string;
   visitId: string;
   lines: (BillLine & { batchId?: string })[];
   mode: "cash" | "upi" | "card";
   actorStaffId: string | null;
+  /* Pass the tenant transaction to run under RLS; its own transaction
+     then nests as a savepoint rather than taking a fresh connection. */
+  executor?: Executor;
 }): Promise<RecordBillResult> {
   if (lines.length === 0) {
     return { ok: false, error: "Nothing to bill" };
   }
 
   try {
-    return await db.transaction(async (tx) => {
+    return await executor.transaction(async (tx) => {
       /*
        * Idempotency: a double-tap on "collect" must not write two bills for
        * one visit. Locking the visit row first — not just reading it — is
