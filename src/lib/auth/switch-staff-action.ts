@@ -6,9 +6,6 @@ import { resolveStaffIdentity } from "@/db/queries/staff";
 import { CURRENT_STAFF_COOKIE } from "./current-staff";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
-/* Until real auth is wired, the clinic is fixed to the seeded scenario —
-   matches every page.tsx's await getActiveClinicId() constant. */
-
 /**
  * Called once a staff member's PIN is accepted on the device (§7.12). Sets
  * the device-session cookie that getCurrentStaff() reads everywhere else.
