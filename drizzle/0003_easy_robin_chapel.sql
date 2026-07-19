@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "bills_one_active_per_visit_idx" ON "bills" USING btree ("visit_id") WHERE "bills"."archived_at" is null;

@@ -1,26 +1,205 @@
 @import "tailwindcss";
 
+/*
+ * ClinicOS design tokens.
+ *
+ * Direction: soft clinical SaaS — cool blue-green canvas, generous white
+ * cards, mint and sky gradient surfaces, green primary actions.
+ *
+ * One rule survives from the original Vitality spec unchanged: red is only
+ * ever clinical urgency (fever, allergy, priority, expired stock). It is never
+ * a button, never a brand colour, never decoration. Green now carries primary
+ * actions, so "dispensed"-type status relies on its label rather than its
+ * colour to stay distinguishable.
+ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces */
+  --canvas: #f1f7fb;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #e8f1f8;
+  --hairline: rgba(15, 40, 60, 0.08);
+
+  /* Type */
+  --ink: #0f1c26;
+  --ink-secondary: #5b7286;
+
+  /*
+   * Action green.
+   *
+   * Deliberately deeper than the design reference's #0FA968. That value
+   * measures 3.05:1 against white — it fails WCAG AA (4.5:1) both as text on
+   * a card AND as the white label on a filled button, which is most of what
+   * this colour does. #0A8352 keeps the same hue and reads as the same green,
+   * at 4.79:1 in both directions. Do not lighten it back without re-measuring.
+   */
+  --accent: #0a8352;
+  --accent-hover: #097347;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(10, 131, 82, 0.11);
+
+  /* Gradient tints for hero panels and stat tiles */
+  --tint-sky-from: #dcecf8;
+  --tint-sky-to: #eff7fc;
+  --tint-mint-from: #d8f2e6;
+  --tint-mint-to: #edfaf3;
+  --tint-hero-from: #8fc4e4;
+  --tint-hero-to: #cbe6f4;
+
+  /* Metric colours */
+  --metric-weight: #6b4ce0;
+  --metric-height: #1d7fae;
+  --metric-temp: #d02f35;
+
+  /*
+   * Clinical states — red stays exclusively urgent.
+   * Every value here carries text on a light surface, so each is set at or
+   * above 4.5:1 against white rather than picked by eye.
+   */
+  --alert: #d02f35; /* 5.07:1 */
+  --alert-surface: rgba(208, 47, 53, 0.09);
+  --success: #0a8352; /* 4.79:1 */
+  --success-surface: rgba(10, 131, 82, 0.11);
+  --warning: #a35a00; /* 5.22:1 — amber at AA needs to go this deep on white */
+  --warning-surface: rgba(240, 140, 26, 0.14);
+
+  /* Shape — the reference runs noticeably rounder than iOS */
+  --radius-card: 24px;
+  --radius-control: 14px;
+  --radius-pill: 999px;
+
+  /* Touch — shared budget tablets, 48px floor */
+  --touch-min: 48px;
+  --touch-primary: 54px;
+}
+
+.dark {
+  --canvas: #071219;
+  --surface: #0e1d27;
+  --surface-raised: #142732;
+  --surface-sunken: #0a1720;
+  --hairline: rgba(255, 255, 255, 0.1);
+
+  --ink: #eaf3f8;
+  --ink-secondary: #8ba6b8;
+
+  --accent: #16c47c;
+  --accent-hover: #14b271;
+  --accent-ink: #04170e;
+  --accent-soft: rgba(22, 196, 124, 0.16);
+
+  --tint-sky-from: #0f2735;
+  --tint-sky-to: #0b1c26;
+  --tint-mint-from: #0c2a20;
+  --tint-mint-to: #091d17;
+  --tint-hero-from: #14384c;
+  --tint-hero-to: #0d2432;
+
+  --metric-weight: #a48bff;
+  --metric-height: #5cc2f0;
+  --metric-temp: #ff6369;
+
+  --alert: #ff6369;
+  --alert-surface: rgba(255, 99, 105, 0.16);
+  --success: #16c47c;
+  --success-surface: rgba(22, 196, 124, 0.16);
+  --warning: #ffa940;
+  --warning-surface: rgba(255, 169, 64, 0.16);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-hairline: var(--hairline);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-metric-weight: var(--metric-weight);
+  --color-metric-height: var(--metric-height);
+  --color-metric-temp: var(--metric-temp);
+  --color-alert: var(--alert);
+  --color-alert-surface: var(--alert-surface);
+  --color-success: var(--success);
+  --color-success-surface: var(--success-surface);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+
+  --radius-card: var(--radius-card);
+  --radius-control: var(--radius-control);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter Tight", "Segoe UI",
+    sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Gradient surfaces used by hero panels and stat tiles. */
+  .bg-tint-sky {
+    background-image: linear-gradient(
+      145deg,
+      var(--tint-sky-from),
+      var(--tint-sky-to)
+    );
+  }
+
+  .bg-tint-mint {
+    background-image: linear-gradient(
+      145deg,
+      var(--tint-mint-from),
+      var(--tint-mint-to)
+    );
+  }
+
+  .bg-tint-hero {
+    background-image: linear-gradient(
+      160deg,
+      var(--tint-hero-from),
+      var(--tint-hero-to)
+    );
+  }
+
+  /* The reference's signature soft, wide, low-opacity card lift. */
+  .shadow-soft {
+    box-shadow:
+      0 1px 2px rgba(15, 40, 60, 0.04),
+      0 12px 32px -14px rgba(15, 40, 60, 0.16);
+  }
+
+  .dark .shadow-soft {
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  }
 }

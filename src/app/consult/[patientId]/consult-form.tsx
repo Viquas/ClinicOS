@@ -1,0 +1,444 @@
+"use client";
+
+import { AlertBanner } from "@/components/ui/alert-banner";
+import { Card, SectionLabel } from "@/components/ui/card";
+import { IdentityHeader } from "@/components/ui/identity-header";
+import { PrimaryButton, SecondaryButton } from "@/components/ui/primary-button";
+import { StatusPill } from "@/components/ui/status";
+import { findAllergyConflicts } from "@/lib/clinical/allergy";
+import { ageLabel, titleCase } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { Check, Plus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { recordConsultationAction } from "./actions";
+
+/* Scenario date — becomes the real clock once the seed uses live dates. */
+const TODAY = "2026-07-18";
+
+type Patient = {
+  id: string;
+  name: string;
+  sex: string;
+  dateOfBirth: string | null;
+  ageYears: number | null;
+  allergies: string[];
+  tags: string[];
+};
+
+type StockItem = {
+  id: string;
+  name: string;
+  strength: string | null;
+  unit: string;
+  scheduleClass: string;
+  quantity: number;
+};
+
+type Line = {
+  id: string;
+  inventoryItemId: string | null;
+  drugName: string;
+  strength: string | null;
+  dosage: string;
+  durationDays: number;
+  scheduleClass: string;
+  overrideReason?: string;
+};
+
+/**
+ * Consultation (§7.4) — the 90-second screen.
+ *
+ * Three things are load-bearing here:
+ *  1. The allergy banner is pinned above everything and travels from the chart.
+ *  2. The prescription picker shows clinic stock FIRST with live quantities,
+ *     because a prescription the clinic can fill is worth more than a
+ *     theoretically better one it cannot.
+ *  3. Prescribing into an allergy class demands a typed reason. No reason,
+ *     no add — the override is deliberately slower than the safe path.
+ *
+ * A diagnosis alone closes the visit — a prescription is not required, and
+ * a doctor with no prescribing registration (§9.2) can still complete a
+ * visit; they are only blocked from adding drugs to it, which is what
+ * `canPrescribe` gates.
+ */
+export function ConsultForm({
+  visitId,
+  tokenId,
+  doctorId,
+  canPrescribe,
+  patient,
+  vitals,
+  diagnosisFavourites,
+  stock,
+}: {
+  visitId: string;
+  tokenId: string;
+  doctorId: string;
+  canPrescribe: boolean;
+  patient: Patient;
+  vitals: Record<string, number | string> | null;
+  diagnosisFavourites: string[];
+  stock: StockItem[];
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [diagnosis, setDiagnosis] = useState("");
+  const [advice, setAdvice] = useState("");
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [lines, setLines] = useState<Line[]>([]);
+  const [pending, setPending] = useState<StockItem | null>(null);
+  const [reason, setReason] = useState("");
+
+  const weightKg = vitals?.weightKg;
+
+  const addLine = (item: StockItem, overrideReason?: string) => {
+    setLines((prev) => [
+      ...prev,
+      {
+        id: item.id,
+        inventoryItemId: item.id,
+        drugName: item.name,
+        strength: item.strength,
+        dosage: "1-0-1",
+        durationDays: 3,
+        scheduleClass: item.scheduleClass,
+        overrideReason,
+      },
+    ]);
+  };
+
+  const attemptAdd = (item: StockItem) => {
+    const conflicts = findAllergyConflicts(item.name, patient.allergies);
+    if (conflicts.length > 0) {
+      /* Do not add yet — the override dialog below is the only way through. */
+      setPending(item);
+      setReason("");
+      return;
+    }
+    addLine(item);
+  };
+
+  const pendingConflicts = pending
+    ? findAllergyConflicts(pending.name, patient.allergies)
+    : [];
+
+  const handleSave = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await recordConsultationAction({
+        visitId,
+        tokenId,
+        doctorId,
+        diagnosis,
+        advice,
+        followUpDate: followUpDate || null,
+        lines: lines.map((l) => ({
+          inventoryItemId: l.inventoryItemId,
+          drugName: l.drugName,
+          strength: l.strength,
+          dosage: l.dosage,
+          durationDays: l.durationDays,
+          scheduleClass: l.scheduleClass,
+          allergyOverrideReason: l.overrideReason ?? null,
+        })),
+      });
+      if (result.ok) {
+        router.push("/queue");
+      } else {
+        setError(result.error);
+      }
+    });
+  };
+
+  return (
+    <>
+      <IdentityHeader
+        name={patient.name}
+        ageLabel={ageLabel(patient, TODAY)}
+        sex={titleCase(patient.sex)}
+        /* Consultation room is private — front desk masks, this does not. */
+        maskContact={false}
+        tags={patient.tags}
+        trailing={
+          weightKg ? (
+            <div className="text-right">
+              <div className="tabular text-[24px] font-extrabold text-ink">
+                {weightKg}
+              </div>
+              <div className="text-[12px] font-semibold text-ink-secondary">kg</div>
+            </div>
+          ) : null
+        }
+      />
+
+      {/* Rule 1: above all other content, always. */}
+      {patient.allergies.length > 0 ? (
+        <div className="mt-4">
+          <AlertBanner
+            title={`Allergy — ${patient.allergies.join(", ")}`}
+            detail="Prescribing in this class needs an explicit reason."
+          />
+        </div>
+      ) : null}
+
+      {!canPrescribe ? (
+        <div className="mt-3">
+          <AlertBanner
+            tone="warning"
+            title="Prescription blocked — doctor profile incomplete"
+            detail="Add the state medical council registration number in Settings before issuing prescriptions."
+          />
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="mt-3">
+          <AlertBanner title={error} />
+        </div>
+      ) : null}
+
+      <div className="mt-6">
+        <SectionLabel>Diagnosis</SectionLabel>
+        <Card className="p-4">
+          <input
+            value={diagnosis}
+            onChange={(e) => setDiagnosis(e.target.value)}
+            placeholder="Type or pick a favourite"
+            className={cn(
+              "w-full bg-transparent text-[19px] font-medium text-ink",
+              "outline-none placeholder:font-normal placeholder:text-ink-secondary/60",
+            )}
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            {diagnosisFavourites.map((fav) => (
+              <button
+                key={fav}
+                onClick={() => setDiagnosis(fav)}
+                className={cn(
+                  "min-h-[38px] rounded-[var(--radius-pill)] px-3.5",
+                  "text-[14px] font-semibold transition-colors duration-150",
+                  diagnosis === fav
+                    ? "bg-accent text-accent-ink"
+                    : "bg-surface-sunken text-ink-secondary",
+                )}
+              >
+                {fav}
+              </button>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div className="mt-6">
+        <SectionLabel>Advice &amp; follow-up</SectionLabel>
+        <Card className="p-4">
+          <textarea
+            value={advice}
+            onChange={(e) => setAdvice(e.target.value)}
+            placeholder="Advice for the family (optional)"
+            rows={2}
+            className={cn(
+              "w-full resize-none bg-transparent text-[16px] text-ink",
+              "outline-none placeholder:text-ink-secondary/60",
+            )}
+          />
+          <label className="mt-3 block">
+            <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-ink-secondary">
+              Follow-up date (optional)
+            </span>
+            <input
+              type="date"
+              value={followUpDate}
+              onChange={(e) => setFollowUpDate(e.target.value)}
+              className={cn(
+                "mt-1 min-h-[var(--touch-min)] w-full rounded-[var(--radius-control)] bg-surface-sunken px-3.5",
+                "text-[16px] text-ink outline-none",
+              )}
+            />
+          </label>
+        </Card>
+      </div>
+
+      <div className="mt-6">
+        <SectionLabel>Prescription</SectionLabel>
+
+        {lines.length > 0 ? (
+          <div className="mb-3 flex flex-col gap-2">
+            {lines.map((line) => (
+              <Card key={line.id} className="flex items-center gap-3 p-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[16px] font-bold text-ink">
+                      {line.drugName}
+                    </span>
+                    {line.overrideReason ? (
+                      <StatusPill tone="alert">Allergy override</StatusPill>
+                    ) : null}
+                  </div>
+                  <div className="text-[14px] text-ink-secondary">
+                    {line.dosage} · {line.durationDays} days
+                    {line.overrideReason ? ` · ${line.overrideReason}` : ""}
+                  </div>
+                </div>
+                <button
+                  aria-label={`Remove ${line.drugName}`}
+                  onClick={() =>
+                    setLines((prev) => prev.filter((l) => l.id !== line.id))
+                  }
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-ink-secondary active:bg-surface-sunken"
+                >
+                  <X size={18} />
+                </button>
+              </Card>
+            ))}
+          </div>
+        ) : null}
+
+        <p className="mb-2 px-1 text-[13px] font-medium text-ink-secondary">
+          In stock at this clinic
+        </p>
+        <div className="flex flex-col gap-2">
+          {stock.map((item) => {
+            const conflicts = findAllergyConflicts(item.name, patient.allergies);
+            const added = lines.some((l) => l.inventoryItemId === item.id);
+
+            return (
+              <Card
+                key={item.id}
+                className={cn(
+                  "flex items-center gap-3 p-4",
+                  conflicts.length > 0 && "ring-1 ring-inset ring-alert/30",
+                )}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[16px] font-semibold text-ink">
+                      {item.name}
+                    </span>
+                    {item.scheduleClass !== "none" ? (
+                      <StatusPill tone="warning">
+                        Schedule {item.scheduleClass.toUpperCase()}
+                      </StatusPill>
+                    ) : null}
+                    {conflicts.length > 0 ? (
+                      <StatusPill tone="alert">
+                        {conflicts[0].crossSensitivity
+                          ? "Cross-sensitivity"
+                          : "Allergy"}
+                      </StatusPill>
+                    ) : null}
+                  </div>
+                  <div className="text-[14px] text-ink-secondary">
+                    {item.strength ?? item.unit} ·{" "}
+                    <span
+                      className={item.quantity > 0 ? "text-success" : "text-alert"}
+                    >
+                      {item.quantity > 0
+                        ? `${item.quantity} ${item.unit} in stock`
+                        : "Out of stock"}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => attemptAdd(item)}
+                  disabled={added || !canPrescribe}
+                  aria-label={`Add ${item.name}`}
+                  className={cn(
+                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
+                    "transition-colors duration-150 disabled:opacity-40",
+                    added ? "bg-accent-soft text-accent" : "bg-accent text-accent-ink",
+                  )}
+                >
+                  {added ? <Check size={18} /> : <Plus size={18} />}
+                </button>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-7">
+        <PrimaryButton
+          disabled={!diagnosis.trim() || isPending}
+          onClick={handleSave}
+        >
+          {isPending ? "Saving…" : "Save & send to pharmacy"}
+        </PrimaryButton>
+      </div>
+
+      {/*
+        Override dialog — the only path to prescribing into an allergy.
+
+        z-[60], not z-50: the bottom nav is z-50 and renders later in the DOM,
+        so an equal z-index put the nav ON TOP of this dialog's buttons at
+        mobile width — "Prescribe anyway" was half-hidden behind it. A modal
+        must always outrank persistent chrome, and the extra bottom padding
+        keeps the actions clear of the home indicator.
+      */}
+      {pending ? (
+        <div
+          className={cn(
+            "fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 sm:items-center",
+            "pb-[calc(1rem+env(safe-area-inset-bottom))]",
+          )}
+        >
+          <Card className="w-full max-w-md p-5">
+            <h2 className="text-[19px] font-extrabold tracking-[-0.02em] text-alert">
+              {pendingConflicts[0]?.crossSensitivity
+                ? "Cross-sensitivity warning"
+                : "Recorded allergy"}
+            </h2>
+            <p className="mt-1.5 text-[15px] leading-snug text-ink">
+              {patient.name} has a recorded allergy to{" "}
+              <strong>{pendingConflicts[0]?.recordedAllergy}</strong>.{" "}
+              {pending.name} is{" "}
+              {pendingConflicts[0]?.crossSensitivity
+                ? "cross-reactive with"
+                : "in"}{" "}
+              the {pendingConflicts[0]?.matchedClass} class.
+            </p>
+
+            <label
+              htmlFor="override-reason"
+              className="mt-4 block text-[13px] font-semibold uppercase tracking-[0.04em] text-ink-secondary"
+            >
+              Reason for overriding
+            </label>
+            <input
+              id="override-reason"
+              autoFocus
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g. previous reaction was mild, no alternative"
+              className={cn(
+                "mt-1.5 w-full rounded-[var(--radius-control)] bg-surface-sunken px-3.5 py-3",
+                "text-[16px] text-ink outline-none placeholder:text-ink-secondary/60",
+              )}
+            />
+
+            <div className="mt-5 flex items-center gap-3">
+              <SecondaryButton onClick={() => setPending(null)}>
+                Cancel
+              </SecondaryButton>
+              <div className="flex-1">
+                <PrimaryButton
+                  /* No reason, no override. The safe path stays faster. */
+                  disabled={reason.trim().length < 4}
+                  onClick={() => {
+                    addLine(pending, reason.trim());
+                    setPending(null);
+                  }}
+                >
+                  Prescribe anyway
+                </PrimaryButton>
+              </div>
+            </div>
+          </Card>
+        </div>
+      ) : null}
+    </>
+  );
+}
