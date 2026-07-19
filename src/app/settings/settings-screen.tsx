@@ -9,6 +9,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/primary-button";
 import { StatusPill } from "@/components/ui/status";
 import type { ClinicProfile } from "@/db/queries/clinic";
+import { switchClinicAction } from "@/lib/auth/switch-clinic-action";
 import type { StaffRow } from "@/db/queries/staff";
 import { describeAudit } from "@/lib/audit/describe";
 import type { StaffRole } from "@/lib/auth/claims";
@@ -40,6 +41,13 @@ type AuditEntry = {
 
 type LastChange = { byName: string | null; at: string; reason: string } | null;
 
+type SwitchableClinic = {
+  id: string;
+  name: string;
+  city: string | null;
+  initials: string;
+};
+
 /**
  * Settings (§7.8, §7.12).
  *
@@ -53,6 +61,8 @@ export function SettingsScreen({
   currentStaffId,
   currentStaffRoles,
   clinic,
+  switchableClinics,
+  activeClinicId,
   lastChangeByStaffId,
   audit,
 }: {
@@ -60,6 +70,8 @@ export function SettingsScreen({
   currentStaffId: string;
   currentStaffRoles: StaffRole[];
   clinic: ClinicProfile | null;
+  switchableClinics: SwitchableClinic[];
+  activeClinicId: string;
   lastChangeByStaffId: Record<string, LastChange>;
   audit: AuditEntry[];
 }) {
@@ -71,6 +83,8 @@ export function SettingsScreen({
         currentStaffId={currentStaffId}
         currentStaffRoles={currentStaffRoles}
         clinic={clinic}
+        switchableClinics={switchableClinics}
+        activeClinicId={activeClinicId}
         lastChangeByStaffId={lastChangeByStaffId}
         audit={audit}
       />
@@ -85,6 +99,8 @@ function Tabs({
   currentStaffId,
   currentStaffRoles,
   clinic,
+  switchableClinics,
+  activeClinicId,
   lastChangeByStaffId,
   audit,
 }: {
@@ -92,6 +108,8 @@ function Tabs({
   currentStaffId: string;
   currentStaffRoles: StaffRole[];
   clinic: ClinicProfile | null;
+  switchableClinics: SwitchableClinic[];
+  activeClinicId: string;
   lastChangeByStaffId: Record<string, LastChange>;
   audit: AuditEntry[];
 }) {
@@ -137,6 +155,8 @@ function Tabs({
         <ClinicTab
           clinic={clinic}
           isOwner={currentStaffRoles.includes("owner")}
+          switchableClinics={switchableClinics}
+          activeClinicId={activeClinicId}
         />
       ) : null}
       {tab === "staff" ? (
@@ -186,9 +206,13 @@ function ThemeControl() {
 function ClinicTab({
   clinic,
   isOwner,
+  switchableClinics,
+  activeClinicId,
 }: {
   clinic: ClinicProfile | null;
   isOwner: boolean;
+  switchableClinics: SwitchableClinic[];
+  activeClinicId: string;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -240,6 +264,12 @@ function ClinicTab({
 
       {editing && clinic ? (
         <EditClinicDialog clinic={clinic} onClose={() => setEditing(false)} />
+      ) : null}
+
+      {/* Only meaningful once onboarding has produced a second clinic —
+          otherwise this is a control with exactly one option. */}
+      {switchableClinics.length > 1 ? (
+        <ClinicSwitcher clinics={switchableClinics} activeId={activeClinicId} />
       ) : null}
 
       <ThemeControl />
@@ -539,6 +569,89 @@ function ReasonField({
  * these fields must be fillable afterwards — otherwise "add it later in
  * Settings" is the same dead end the doctor registration number was.
  */
+/**
+ * Moving between clinics on one device (§7.12).
+ *
+ * Without this, onboarding is a one-way door: the active-clinic cookie is
+ * httpOnly, so a device that creates a clinic has no route back to any
+ * other one short of clearing browser data.
+ */
+function ClinicSwitcher({
+  clinics,
+  activeId,
+}: {
+  clinics: SwitchableClinic[];
+  activeId: string;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <Card className="p-5">
+      <h3 className="text-[17px] font-bold tracking-[-0.015em] text-ink">
+        Switch clinic
+      </h3>
+      <p className="mt-1 text-[14px] leading-snug text-ink-secondary">
+        This device is working in {clinics.find((c) => c.id === activeId)?.name ?? "this clinic"}.
+        Switching signs you in as that clinic&apos;s owner.
+      </p>
+
+      {error ? (
+        <div className="mt-3">
+          <AlertBanner title={error} />
+        </div>
+      ) : null}
+
+      <ul className="mt-4 flex flex-col gap-2">
+        {clinics.map((c) => {
+          const isActive = c.id === activeId;
+          return (
+            <li key={c.id}>
+              <button
+                disabled={isActive || isPending}
+                onClick={() => {
+                  setError(null);
+                  startTransition(async () => {
+                    const result = await switchClinicAction(c.id);
+                    if (result && !result.ok) setError(result.error);
+                  });
+                }}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2.5 text-left",
+                  isActive
+                    ? "bg-accent-soft"
+                    : "bg-surface-sunken transition-opacity duration-150 hover:opacity-80",
+                )}
+              >
+                <span
+                  aria-hidden
+                  className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold",
+                    isActive ? "bg-accent text-accent-ink" : "bg-surface text-ink-secondary",
+                  )}
+                >
+                  {c.initials}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-semibold text-ink">
+                    {c.name}
+                  </span>
+                  {c.city ? (
+                    <span className="block truncate text-[13px] text-ink-secondary">
+                      {c.city}
+                    </span>
+                  ) : null}
+                </span>
+                {isActive ? <StatusPill tone="accent">Current</StatusPill> : null}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
 function EditClinicDialog({
   clinic,
   onClose,

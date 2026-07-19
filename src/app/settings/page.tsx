@@ -1,4 +1,4 @@
-import { getClinicProfile } from "@/db/queries/clinic";
+import { getClinicProfile, getSwitchableClinics } from "@/db/queries/clinic";
 import { getRecordRevisions } from "@/db/queries/revisions";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { getAuditLog, getStaff } from "@/db/queries/staff";
@@ -22,6 +22,7 @@ export default async function SettingsPage() {
     getCurrentStaff(clinicId),
     getClinicProfile(clinicId),
   ]);
+  const switchableClinics = await getSwitchableClinics();
 
   /* Latest role/active change per member (P1 §7.8 polish) — the staff list
      is small, so one lookup per member stays cheap. */
@@ -49,6 +50,8 @@ export default async function SettingsPage() {
       currentStaffId={currentStaff.id}
       currentStaffRoles={currentStaff.roles}
       clinic={clinic}
+      switchableClinics={switchableClinics}
+      activeClinicId={clinicId}
       lastChangeByStaffId={lastChangeByStaffId}
       audit={audit.map((a) => ({
         id: a.id,

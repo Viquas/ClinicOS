@@ -1,7 +1,7 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { clinics } from "@/db/schema";
+import { clinics, staff } from "@/db/schema";
 
 export type ClinicProfile = {
   id: string;
@@ -26,6 +26,38 @@ export type ClinicProfile = {
  * onboarding was correct in the database and mislabelled everywhere on
  * screen.
  */
+/**
+ * Every clinic this device could switch into.
+ *
+ * Onboarding was otherwise a one-way door: the active-clinic cookie is
+ * httpOnly, so creating a clinic left no route back to any other one short
+ * of clearing browser data. Only clinics with someone able to sign in are
+ * offered — switching into a clinic with no active staff is the lockout
+ * getActiveClinicId() already guards against.
+ */
+export async function getSwitchableClinics(): Promise<
+  { id: string; name: string; city: string | null; initials: string }[]
+> {
+  const rows = await db
+    .selectDistinct({
+      id: clinics.id,
+      name: clinics.name,
+      city: clinics.city,
+      createdAt: clinics.createdAt,
+    })
+    .from(clinics)
+    .innerJoin(staff, eq(staff.clinicId, clinics.id))
+    .where(and(eq(staff.isActive, true), isNull(staff.archivedAt)))
+    .orderBy(asc(clinics.createdAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    city: r.city,
+    initials: initialsOf(r.name),
+  }));
+}
+
 export async function getClinicProfile(
   clinicId: string,
 ): Promise<ClinicProfile | null> {
