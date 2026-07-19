@@ -1,4 +1,5 @@
 import { getVitalsCaptureContext } from "@/db/queries/vitals-capture";
+import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { resolveSpecialtyPack } from "@/lib/clinical/specialties";
 import { notFound, redirect } from "next/navigation";
@@ -23,7 +24,10 @@ export default async function VitalsPage({
   const { visitId } = await searchParams;
   if (!visitId) notFound();
 
-  const ctx = await getVitalsCaptureContext(await getActiveClinicId(), visitId);
+  const clinicId = await getActiveClinicId();
+  const ctx = await tenantDb((tx) =>
+    getVitalsCaptureContext(clinicId, visitId, tx),
+  );
   if (!ctx || ctx.patient.id !== patientId) notFound();
 
   /* Vitals belong to the waiting step only — a token already past it (or one

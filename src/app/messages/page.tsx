@@ -1,4 +1,5 @@
 import { getMessages } from "@/db/queries/messages";
+import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { MessagesBoard } from "./messages-board";
@@ -12,8 +13,9 @@ export const dynamic = "force-dynamic";
 
 
 export default async function MessagesPage() {
-  await requireRouteAccess(await getActiveClinicId(), "/messages");
-  const messages = await getMessages(await getActiveClinicId());
+  const clinicId = await getActiveClinicId();
+  await requireRouteAccess(clinicId, "/messages");
+  const messages = await tenantDb((tx) => getMessages(clinicId, undefined, tx));
 
   return (
     <MessagesBoard

@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -16,8 +17,11 @@ export const dynamic = "force-dynamic";
 const TODAY = "2026-07-18";
 
 export default async function PharmacyPage() {
-  await requireRouteAccess(await getActiveClinicId(), "/pharmacy");
-  const context = await getDispensingContext(await getActiveClinicId(), TODAY);
+  const clinicId = await getActiveClinicId();
+  await requireRouteAccess(clinicId, "/pharmacy");
+  const context = await tenantDb((tx) =>
+    getDispensingContext(clinicId, TODAY, tx),
+  );
 
   if (!context) {
     return (

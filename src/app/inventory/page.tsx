@@ -1,4 +1,5 @@
 import { getStock } from "@/db/queries/pharmacy";
+import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { getH1Register } from "@/db/queries/h1-register";
@@ -14,11 +15,11 @@ export const dynamic = "force-dynamic";
 
 
 export default async function InventoryPage() {
-  await requireRouteAccess(await getActiveClinicId(), "/inventory");
-  const [stock, h1] = await Promise.all([
-    getStock(await getActiveClinicId()),
-    getH1Register(await getActiveClinicId()),
-  ]);
+  const clinicId = await getActiveClinicId();
+  await requireRouteAccess(clinicId, "/inventory");
+  const [stock, h1] = await tenantDb((tx) =>
+    Promise.all([getStock(clinicId, tx), getH1Register(clinicId, undefined, tx)]),
+  );
 
   return (
     <InventoryBoard

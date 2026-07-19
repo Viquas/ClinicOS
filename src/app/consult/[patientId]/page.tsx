@@ -1,4 +1,5 @@
 import { getConsultContext } from "@/db/queries/consult";
+import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { getStock } from "@/db/queries/pharmacy";
 import { resolveSpecialtyPack } from "@/lib/clinical/specialties";
@@ -24,10 +25,13 @@ export default async function ConsultPage({
   const { visitId } = await searchParams;
   if (!visitId) notFound();
 
-  const [ctx, stock] = await Promise.all([
-    getConsultContext(await getActiveClinicId(), visitId),
-    getStock(await getActiveClinicId()),
-  ]);
+  const clinicId = await getActiveClinicId();
+  const [ctx, stock] = await tenantDb((tx) =>
+    Promise.all([
+      getConsultContext(clinicId, visitId, tx),
+      getStock(clinicId, tx),
+    ]),
+  );
   if (!ctx || ctx.patient.id !== patientId) notFound();
 
   /* The consult belongs to the with_doctor step only — a token already past

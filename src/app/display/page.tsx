@@ -1,4 +1,5 @@
 import { getDoctors, getQueue } from "@/db/queries/queue";
+import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { DisplayBoard } from "./display-board";
 
@@ -13,10 +14,10 @@ export const dynamic = "force-dynamic";
 const TODAY = "2026-07-18";
 
 export default async function DisplayPage() {
-  const [queue, doctors] = await Promise.all([
-    getQueue(await getActiveClinicId(), TODAY),
-    getDoctors(await getActiveClinicId()),
-  ]);
+  const clinicId = await getActiveClinicId();
+  const [queue, doctors] = await tenantDb((tx) =>
+    Promise.all([getQueue(clinicId, TODAY, tx), getDoctors(clinicId, tx)]),
+  );
 
   return <DisplayBoard queue={queue} doctors={doctors} />;
 }

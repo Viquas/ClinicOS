@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { AlertBanner } from "@/components/ui/alert-banner";
@@ -40,8 +41,11 @@ function money(paise: number): { value: string; unit?: string } {
 }
 
 export default async function DashboardPage() {
-  await requireRouteAccess(await getActiveClinicId(), "/dashboard");
-  const data = await getDashboard(await getActiveClinicId(), MONTH_START, MONTH_END, TODAY);
+  const clinicId = await getActiveClinicId();
+  await requireRouteAccess(clinicId, "/dashboard");
+  const data = await tenantDb((tx) =>
+    getDashboard(clinicId, MONTH_START, MONTH_END, TODAY, tx),
+  );
 
   const alertCount = data.expiringAlerts.length + data.lowStock.length;
   const consultShare =

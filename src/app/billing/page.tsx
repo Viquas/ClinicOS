@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -17,8 +18,11 @@ export const dynamic = "force-dynamic";
 const TODAY = "2026-07-18";
 
 export default async function BillingPage() {
-  await requireRouteAccess(await getActiveClinicId(), "/billing");
-  const billable = await getBillableVisit(await getActiveClinicId(), TODAY);
+  const clinicId = await getActiveClinicId();
+  await requireRouteAccess(clinicId, "/billing");
+  const billable = await tenantDb((tx) =>
+    getBillableVisit(clinicId, TODAY, tx),
+  );
 
   if (!billable) {
     return (
@@ -32,7 +36,9 @@ export default async function BillingPage() {
     );
   }
 
-  const draft = await getBillDraft(await getActiveClinicId(), billable.visitId);
+  const draft = await tenantDb((tx) =>
+    getBillDraft(clinicId, billable.visitId, tx),
+  );
   if (!draft) {
     return (
       <>

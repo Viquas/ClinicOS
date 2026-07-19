@@ -1,4 +1,5 @@
 import { getVaccinationRoster } from "@/db/queries/vaccinations";
+import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { VaccinationsBoard } from "./vaccinations-board";
@@ -13,7 +14,10 @@ export const dynamic = "force-dynamic";
 const TODAY = "2026-07-18";
 
 export default async function VaccinationsPage() {
-  await requireRouteAccess(await getActiveClinicId(), "/vaccinations");
-  const roster = await getVaccinationRoster(await getActiveClinicId(), TODAY);
+  const clinicId = await getActiveClinicId();
+  await requireRouteAccess(clinicId, "/vaccinations");
+  const roster = await tenantDb((tx) =>
+    getVaccinationRoster(clinicId, TODAY, tx),
+  );
   return <VaccinationsBoard roster={roster} />;
 }
