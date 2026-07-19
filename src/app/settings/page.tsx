@@ -1,3 +1,4 @@
+import { getRecordRevisions } from "@/db/queries/revisions";
 import { getAuditLog, getStaff } from "@/db/queries/staff";
 import { getCurrentStaff } from "@/lib/auth/current-staff";
 import { SettingsScreen } from "./settings-screen";
@@ -20,11 +21,32 @@ export default async function SettingsPage() {
     getCurrentStaff(CLINIC_ID),
   ]);
 
+  /* Latest role/active change per member (P1 §7.8 polish) — the staff list
+     is small, so one lookup per member stays cheap. */
+  const lastChangeByStaffId = Object.fromEntries(
+    await Promise.all(
+      staff.map(async (member) => {
+        const [latest] = await getRecordRevisions(CLINIC_ID, "staff", member.id);
+        return [
+          member.id,
+          latest
+            ? {
+                byName: latest.editedByName,
+                at: latest.at.toISOString().slice(0, 10),
+                reason: latest.reason,
+              }
+            : null,
+        ];
+      }),
+    ),
+  );
+
   return (
     <SettingsScreen
       staff={staff}
       currentStaffId={currentStaff.id}
       currentStaffRoles={currentStaff.roles}
+      lastChangeByStaffId={lastChangeByStaffId}
       audit={audit.map((a) => ({
         id: a.id,
         /* Serialise the timestamp for the client boundary. */

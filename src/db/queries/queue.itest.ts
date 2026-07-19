@@ -1,5 +1,13 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { getDoctors, getNextTokenNumber, getQueue } from "./queue";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { staff } from "@/db/schema";
+import {
+  getBookableDoctors,
+  getDoctors,
+  getNextTokenNumber,
+  getQueue,
+} from "./queue";
 
 /**
  * Integration tests — these hit a real Postgres.
@@ -116,6 +124,42 @@ describe("getDoctors", () => {
 
   it("is scoped to the clinic", async () => {
     expect(await getDoctors(OTHER_CLINIC)).toEqual([]);
+  });
+});
+
+describe("getBookableDoctors", () => {
+  const ANAND_STAFF = "22222222-0000-0000-0000-000000000002";
+
+  it("matches the full list when everyone is active with the doctor role", async () => {
+    const bookable = await getBookableDoctors(CLINIC);
+    const full = await getDoctors(CLINIC);
+    expect(bookable.map((d) => d.name).sort()).toEqual(
+      full.map((d) => d.name).sort(),
+    );
+  });
+
+  it("drops a deactivated doctor from bookable but keeps them in the full list", async () => {
+    await db.update(staff).set({ isActive: false }).where(eq(staff.id, ANAND_STAFF));
+    try {
+      const bookable = await getBookableDoctors(CLINIC);
+      expect(bookable.map((d) => d.name)).not.toContain("Dr. Anand Gowda");
+
+      /* The queue/display path must keep him — his tokens still exist. */
+      const full = await getDoctors(CLINIC);
+      expect(full.map((d) => d.name)).toContain("Dr. Anand Gowda");
+    } finally {
+      await db.update(staff).set({ isActive: true }).where(eq(staff.id, ANAND_STAFF));
+    }
+  });
+
+  it("drops a doctor whose doctor role was revoked", async () => {
+    await db.update(staff).set({ roles: ["front_desk"] }).where(eq(staff.id, ANAND_STAFF));
+    try {
+      const bookable = await getBookableDoctors(CLINIC);
+      expect(bookable.map((d) => d.name)).not.toContain("Dr. Anand Gowda");
+    } finally {
+      await db.update(staff).set({ roles: ["doctor"] }).where(eq(staff.id, ANAND_STAFF));
+    }
   });
 });
 

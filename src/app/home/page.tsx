@@ -22,7 +22,12 @@ const TODAY = "2026-07-18";
 const MONTH_START = "2026-07-01";
 const MONTH_END = "2026-07-31";
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ denied?: string }>;
+}) {
+  const { denied } = await searchParams;
   const currentStaff = await getCurrentStaff(CLINIC_ID);
   const roles = currentStaff.roles;
 
@@ -72,6 +77,7 @@ export default async function HomePage() {
   return (
     <HomeScreen
       staffName={currentStaff.name}
+      deniedRoute={denied ?? null}
       roles={roles}
       doctorName={
         currentStaff.doctorId

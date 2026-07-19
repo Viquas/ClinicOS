@@ -1,4 +1,5 @@
-import { getDoctors } from "@/db/queries/queue";
+import { getBookableDoctors } from "@/db/queries/queue";
+import { requireRouteAccess } from "@/lib/auth/route-access";
 import { ReceptionDesk } from "./reception-desk";
 
 /*
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export default async function ReceptionPage() {
-  const doctors = await getDoctors(CLINIC_ID);
+  await requireRouteAccess(CLINIC_ID, "/reception");
+  const doctors = await getBookableDoctors(CLINIC_ID);
   return <ReceptionDesk doctors={doctors} />;
 }

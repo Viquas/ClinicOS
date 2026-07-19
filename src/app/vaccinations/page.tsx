@@ -1,4 +1,5 @@
 import { getVaccinationRoster } from "@/db/queries/vaccinations";
+import { requireRouteAccess } from "@/lib/auth/route-access";
 import { VaccinationsBoard } from "./vaccinations-board";
 
 /*
@@ -13,6 +14,7 @@ const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export default async function VaccinationsPage() {
+  await requireRouteAccess(CLINIC_ID, "/vaccinations");
   const roster = await getVaccinationRoster(CLINIC_ID, TODAY);
   return <VaccinationsBoard roster={roster} />;
 }

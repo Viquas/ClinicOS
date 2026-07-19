@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { requireRouteAccess } from "@/lib/auth/route-access";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { GroupedList, Row, SectionLabel } from "@/components/ui/card";
 import { PrimaryButton } from "@/components/ui/primary-button";
@@ -40,6 +41,7 @@ function money(paise: number): { value: string; unit?: string } {
 }
 
 export default async function DashboardPage() {
+  await requireRouteAccess(CLINIC_ID, "/dashboard");
   const data = await getDashboard(CLINIC_ID, MONTH_START, MONTH_END, TODAY);
 
   const alertCount = data.expiringAlerts.length + data.lowStock.length;

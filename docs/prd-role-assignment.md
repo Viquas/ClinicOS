@@ -56,10 +56,10 @@ Roles today are frozen at seed time: `staff.roles` is a real, role-stacked array
 11. **Empty roles:** a staff member must hold ≥1 role; removing the last one is refused (deactivation is the "no access" state).
 12. **Mid-session role change:** no invalidation machinery — identity is already resolved per request, so the next navigation reflects it. Document this as the intended behavior; verify with the switcher.
 
-### P1
-13. Hide doctors whose staff is deactivated (or doctor role removed) from doctor pickers (reception, MR walk-in) while keeping history intact.
-14. Unauthorized page *reads* redirect to `/home` with a notice.
-15. "Added/edited by" attribution shown on the staff card (reads the revision trail).
+### P1 — ✅ Shipped 2026-07-19
+13. `getBookableDoctors` (active staff still holding the doctor role) now feeds reception and the MR walk-in picker; `getDoctors` stays the full list so the queue and display keep showing a deactivated doctor's existing tokens. 3 itests including the role-revoked case.
+14. Route→role mapping extracted to `lib/auth/route-roles.ts` — ONE map consumed by both the nav (hides the item) and a new `requireRouteAccess()` guard on all 11 gated pages (redirects to `/home?denied=<screen>` with a warning banner). Verified live: Latha (no pharmacy role) opening /pharmacy by URL lands on home with "The pharmacy screen isn't part of your role."
+15. Staff cards show "Last changed by {who} on {date} — {reason}" from the revision trail.
 
 ### P2 (unchanged from prior PRD)
 16. Per-staff permission overrides beyond roles; real auth invites; discount-limit matrix.

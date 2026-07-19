@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { AlertBanner } from "@/components/ui/alert-banner";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { StatTile } from "@/components/ui/stat-tile";
 import type { FollowUpRow } from "@/db/queries/home";
@@ -22,6 +23,7 @@ import Link from "next/link";
  */
 export function HomeScreen({
   staffName,
+  deniedRoute,
   roles,
   doctorName,
   owner,
@@ -31,6 +33,7 @@ export function HomeScreen({
   pharmacy,
 }: {
   staffName: string;
+  deniedRoute: string | null;
   roles: StaffRole[];
   doctorName: string | null;
   owner?: {
@@ -68,6 +71,16 @@ export function HomeScreen({
         title={`Good day, ${firstName}`}
         subtitle={roles.map((r) => r.replace("_", " ")).join(" · ")}
       />
+
+      {deniedRoute ? (
+        <div className="mb-5">
+          <AlertBanner
+            tone="warning"
+            title={`The ${deniedRoute} screen isn't part of your role`}
+            detail="You've been brought back home. Ask the owner if your role needs to change."
+          />
+        </div>
+      ) : null}
 
       {owner ? (
         <section className="mb-7">

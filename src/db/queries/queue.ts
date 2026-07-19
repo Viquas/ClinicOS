@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, isNull, max, ne } from "drizzle-orm";
+import { and, asc, eq, isNull, max, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   doctors,
@@ -123,6 +123,36 @@ export async function getQueue(
       if (a.isPriority !== b.isPriority) return a.isPriority ? -1 : 1;
       return a.number - b.number;
     });
+}
+
+/**
+ * Doctors a NEW visit can be booked with: active staff who still hold the
+ * doctor role. getDoctors below stays the full historical list — the queue
+ * and display boards must keep showing a deactivated doctor's existing
+ * tokens, but reception and the MR walk-in form must stop offering them
+ * for new bookings the moment they're deactivated or lose the role.
+ */
+export async function getBookableDoctors(clinicId: string) {
+  return db
+    .select({
+      id: doctors.id,
+      name: staff.name,
+      specialty: doctors.specialty,
+      registrationNo: doctors.registrationNo,
+      qualification: staff.qualification,
+    })
+    .from(doctors)
+    .innerJoin(staff, eq(staff.id, doctors.staffId))
+    .where(
+      and(
+        eq(doctors.clinicId, clinicId),
+        isNull(doctors.archivedAt),
+        eq(staff.isActive, true),
+        isNull(staff.archivedAt),
+        sql`'doctor' = any(${staff.roles})`,
+      ),
+    )
+    .orderBy(asc(staff.name));
 }
 
 export async function getDoctors(clinicId: string) {

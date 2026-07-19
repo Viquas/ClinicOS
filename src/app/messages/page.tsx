@@ -1,4 +1,5 @@
 import { getMessages } from "@/db/queries/messages";
+import { requireRouteAccess } from "@/lib/auth/route-access";
 import { MessagesBoard } from "./messages-board";
 
 /*
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export default async function MessagesPage() {
+  await requireRouteAccess(CLINIC_ID, "/messages");
   const messages = await getMessages(CLINIC_ID);
 
   return (

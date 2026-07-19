@@ -1,4 +1,5 @@
 import { listPatients } from "@/db/queries/patients";
+import { requireRouteAccess } from "@/lib/auth/route-access";
 import { PatientsBoard } from "./patients-board";
 
 /*
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export default async function PatientsPage() {
+  await requireRouteAccess(CLINIC_ID, "/patients");
   const patients = await listPatients(CLINIC_ID);
   return <PatientsBoard patients={patients} />;
 }

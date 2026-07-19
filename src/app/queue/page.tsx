@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { requireRouteAccess } from "@/lib/auth/route-access";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getDoctors, getQueue } from "@/db/queries/queue";
 import { QueueBoard } from "./queue-board";
@@ -26,6 +27,7 @@ const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export default async function QueuePage() {
+  await requireRouteAccess(CLINIC_ID, "/queue");
   const [queue, doctors] = await Promise.all([
     getQueue(CLINIC_ID, TODAY),
     getDoctors(CLINIC_ID),

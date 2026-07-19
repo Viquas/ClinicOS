@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { requireRouteAccess } from "@/lib/auth/route-access";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getDispensingContext } from "@/db/queries/dispensing";
 import { PharmacyCounter } from "./pharmacy-counter";
@@ -16,6 +17,7 @@ const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export default async function PharmacyPage() {
+  await requireRouteAccess(CLINIC_ID, "/pharmacy");
   const context = await getDispensingContext(CLINIC_ID, TODAY);
 
   if (!context) {

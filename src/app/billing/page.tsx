@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { requireRouteAccess } from "@/lib/auth/route-access";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getBillableVisit } from "@/db/queries/billable";
 import { getBillDraft } from "@/db/queries/billing";
@@ -17,6 +18,7 @@ const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export default async function BillingPage() {
+  await requireRouteAccess(CLINIC_ID, "/billing");
   const billable = await getBillableVisit(CLINIC_ID, TODAY);
 
   if (!billable) {

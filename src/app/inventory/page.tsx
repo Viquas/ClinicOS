@@ -1,4 +1,5 @@
 import { getStock } from "@/db/queries/pharmacy";
+import { requireRouteAccess } from "@/lib/auth/route-access";
 import { getH1Register } from "@/db/queries/h1-register";
 import { InventoryBoard } from "./inventory-board";
 
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export default async function InventoryPage() {
+  await requireRouteAccess(CLINIC_ID, "/inventory");
   const [stock, h1] = await Promise.all([
     getStock(CLINIC_ID),
     getH1Register(CLINIC_ID),

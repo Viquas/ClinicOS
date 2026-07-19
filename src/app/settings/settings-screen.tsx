@@ -35,6 +35,8 @@ type AuditEntry = {
   detail: unknown;
 };
 
+type LastChange = { byName: string | null; at: string; reason: string } | null;
+
 /**
  * Settings (§7.8, §7.12).
  *
@@ -47,11 +49,13 @@ export function SettingsScreen({
   staff,
   currentStaffId,
   currentStaffRoles,
+  lastChangeByStaffId,
   audit,
 }: {
   staff: StaffRow[];
   currentStaffId: string;
   currentStaffRoles: StaffRole[];
+  lastChangeByStaffId: Record<string, LastChange>;
   audit: AuditEntry[];
 }) {
   return (
@@ -61,6 +65,7 @@ export function SettingsScreen({
         staff={staff}
         currentStaffId={currentStaffId}
         currentStaffRoles={currentStaffRoles}
+        lastChangeByStaffId={lastChangeByStaffId}
         audit={audit}
       />
     </>
@@ -73,11 +78,13 @@ function Tabs({
   staff,
   currentStaffId,
   currentStaffRoles,
+  lastChangeByStaffId,
   audit,
 }: {
   staff: StaffRow[];
   currentStaffId: string;
   currentStaffRoles: StaffRole[];
+  lastChangeByStaffId: Record<string, LastChange>;
   audit: AuditEntry[];
 }) {
   const [tab, setTab] = useState<Tab>("clinic");
@@ -124,6 +131,7 @@ function Tabs({
           staff={staff}
           currentStaffId={currentStaffId}
           isOwner={currentStaffRoles.includes("owner")}
+          lastChangeByStaffId={lastChangeByStaffId}
         />
       ) : null}
       {tab === "audit" ? <AuditTab audit={audit} /> : null}
@@ -224,10 +232,12 @@ function StaffTab({
   staff,
   currentStaffId,
   isOwner,
+  lastChangeByStaffId,
 }: {
   staff: StaffRow[];
   currentStaffId: string;
   isOwner: boolean;
+  lastChangeByStaffId: Record<string, LastChange>;
 }) {
   const [editing, setEditing] = useState<StaffRow | null>(null);
   const [togglingActive, setTogglingActive] = useState<StaffRow | null>(null);
@@ -292,6 +302,13 @@ function StaffTab({
                 <StatusPill tone="alert">No registration no.</StatusPill>
               ) : null}
             </div>
+
+            {lastChangeByStaffId[member.id] ? (
+              <p className="mt-2 text-[12px] text-ink-secondary">
+                Last changed by {lastChangeByStaffId[member.id]!.byName ?? "unknown"} on{" "}
+                {lastChangeByStaffId[member.id]!.at} — {lastChangeByStaffId[member.id]!.reason}
+              </p>
+            ) : null}
 
             {isOwner ? (
               <div className="mt-3 flex items-center gap-4 border-t border-hairline pt-3">

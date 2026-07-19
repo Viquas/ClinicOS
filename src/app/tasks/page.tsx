@@ -1,4 +1,5 @@
 import { getNursingTasks } from "@/db/queries/tasks";
+import { requireRouteAccess } from "@/lib/auth/route-access";
 import { TasksBoard } from "./tasks-board";
 
 /*
@@ -13,6 +14,7 @@ const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export default async function TasksPage() {
+  await requireRouteAccess(CLINIC_ID, "/tasks");
   const tasks = await getNursingTasks(CLINIC_ID, TODAY);
 
   return (

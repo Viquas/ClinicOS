@@ -1,6 +1,7 @@
 "use client";
 
 import type { StaffRole } from "@/lib/auth/claims";
+import { roleCanVisit } from "@/lib/auth/route-roles";
 import { cn } from "@/lib/utils";
 import {
   Briefcase,
@@ -46,32 +47,30 @@ import { useState } from "react";
  * squeezing nine tabs to 40px each — below about 48px, tap accuracy on a
  * budget touchscreen falls off badly.
  *
- * Each item declares which roles it serves (§7.8). This gates navigation
- * only — it is wayfinding, not a security boundary, so a direct URL still
- * loads for anyone; a real permission matrix enforced server-side is out of
- * scope for this pass (see docs/prd-role-adaptive.md). Owner always sees
- * every destination, listed or not.
+ * Route→role mapping lives in lib/auth/route-roles.ts, shared with the
+ * server-side page guard so hiding an item and redirecting its direct URL
+ * can never disagree (§7.8). Nav gating is wayfinding; the mutations carry
+ * the real permission checks.
  */
 const NAV: {
   href: string;
   label: string;
   icon: typeof Users;
   primary?: boolean;
-  roles: StaffRole[];
 }[] = [
-  { href: "/home", label: "Home", icon: Home, primary: true, roles: ["owner", "doctor", "front_desk", "nurse", "pharmacy"] },
-  { href: "/reception", label: "Reception", icon: Users, primary: true, roles: ["owner", "front_desk"] },
-  { href: "/queue", label: "Queue", icon: ClipboardList, primary: true, roles: ["owner", "doctor", "front_desk", "nurse"] },
-  { href: "/patients", label: "Patients", icon: FolderOpen, roles: ["owner", "doctor", "front_desk", "nurse"] },
-  { href: "/tasks", label: "Tasks", icon: Stethoscope, roles: ["owner", "doctor", "nurse"] },
-  { href: "/vaccinations", label: "Vaccines", icon: Syringe, roles: ["owner", "doctor", "nurse"] },
-  { href: "/pharmacy", label: "Pharmacy", icon: Pill, primary: true, roles: ["owner", "pharmacy"] },
-  { href: "/inventory", label: "Inventory", icon: Package, roles: ["owner", "pharmacy"] },
-  { href: "/billing", label: "Billing", icon: IndianRupee, roles: ["owner", "front_desk"] },
-  { href: "/mr", label: "Reps", icon: Briefcase, roles: ["owner", "doctor", "front_desk"] },
-  { href: "/messages", label: "Messages", icon: MessageCircle, roles: ["owner", "front_desk"] },
-  { href: "/dashboard", label: "Reports", icon: LayoutDashboard, roles: ["owner"] },
-  { href: "/settings", label: "Settings", icon: Settings, roles: ["owner", "doctor", "front_desk", "nurse", "pharmacy"] },
+  { href: "/home", label: "Home", icon: Home, primary: true },
+  { href: "/reception", label: "Reception", icon: Users, primary: true },
+  { href: "/queue", label: "Queue", icon: ClipboardList, primary: true },
+  { href: "/patients", label: "Patients", icon: FolderOpen },
+  { href: "/tasks", label: "Tasks", icon: Stethoscope },
+  { href: "/vaccinations", label: "Vaccines", icon: Syringe },
+  { href: "/pharmacy", label: "Pharmacy", icon: Pill, primary: true },
+  { href: "/inventory", label: "Inventory", icon: Package },
+  { href: "/billing", label: "Billing", icon: IndianRupee },
+  { href: "/mr", label: "Reps", icon: Briefcase },
+  { href: "/messages", label: "Messages", icon: MessageCircle },
+  { href: "/dashboard", label: "Reports", icon: LayoutDashboard },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function AppNav({
@@ -85,9 +84,7 @@ export function AppNav({
   const [moreOpen, setMoreOpen] = useState(false);
 
   const isActive = (href: string) => pathname.startsWith(href);
-  const visible = NAV.filter(
-    (item) => roles.includes("owner") || item.roles.some((r) => roles.includes(r)),
-  );
+  const visible = NAV.filter((item) => roleCanVisit(roles, item.href));
   const primary = visible.filter((t) => t.primary);
   const overflow = visible.filter((t) => !t.primary);
 

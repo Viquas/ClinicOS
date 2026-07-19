@@ -1,5 +1,6 @@
-import { getDoctors } from "@/db/queries/queue";
+import { getBookableDoctors } from "@/db/queries/queue";
 import { getMrQueue, getRepDirectory } from "@/db/queries/mr";
+import { requireRouteAccess } from "@/lib/auth/route-access";
 import { MrBoard } from "./mr-board";
 
 /*
@@ -14,13 +15,15 @@ const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export default async function MrPage() {
+  await requireRouteAccess(CLINIC_ID, "/mr");
   const dayStart = new Date(`${TODAY}T00:00:00+05:30`);
   const dayEnd = new Date(`${TODAY}T23:59:59.999+05:30`);
 
   const [queue, directory, doctors] = await Promise.all([
     getMrQueue(CLINIC_ID, dayStart, dayEnd),
     getRepDirectory(CLINIC_ID),
-    getDoctors(CLINIC_ID),
+    /* Walk-ins book a NEW visit — deactivated doctors must not appear. */
+    getBookableDoctors(CLINIC_ID),
   ]);
 
   return (
