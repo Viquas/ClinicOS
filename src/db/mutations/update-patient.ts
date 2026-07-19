@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { auditLog, patients, recordRevisions } from "@/db/schema";
 
 export type PatientEdits = Partial<{
@@ -32,19 +33,25 @@ export async function updatePatientDemographics({
   actorStaffId,
   reason,
   edits,
+  executor = db,
 }: {
   clinicId: string;
   patientId: string;
   actorStaffId: string | null;
   reason: string;
   edits: PatientEdits;
+  /* Pass the tenant transaction to run under RLS. Nested inside one, the
+     transaction below becomes a savepoint rather than a second connection —
+     which is the point: a mutation opening its own connection would leave
+     the caller's claims behind and silently regain owner privileges. */
+  executor?: Executor;
 }): Promise<UpdatePatientResult> {
   const trimmedReason = reason.trim();
   if (trimmedReason.length < 4) {
     return { ok: false, error: "A reason is required to correct this record" };
   }
 
-  return db.transaction(async (tx) => {
+  return executor.transaction(async (tx) => {
     const [current] = await tx
       .select({
         name: patients.name,

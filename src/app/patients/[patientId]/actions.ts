@@ -11,6 +11,7 @@ import {
   type PatientEdits,
   type UpdatePatientResult,
 } from "@/db/mutations/update-patient";
+import { tenantDb } from "@/db/tenant-db";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
@@ -29,13 +30,17 @@ export async function updatePatientAction({
   const auth = await requireCurrentStaffCan(await getActiveClinicId(), "patient:register");
   if (!auth.ok) return auth;
 
-  const result = await updatePatientDemographics({
-    clinicId: await getActiveClinicId(),
-    patientId,
-    actorStaffId: auth.staff.id,
-    reason,
-    edits,
-  });
+  const clinicId = await getActiveClinicId();
+  const result = await tenantDb((tx) =>
+    updatePatientDemographics({
+      clinicId,
+      patientId,
+      actorStaffId: auth.staff.id,
+      reason,
+      edits,
+      executor: tx,
+    }),
+  );
 
   if (result.ok) {
     revalidatePath(`/patients/${patientId}`);
