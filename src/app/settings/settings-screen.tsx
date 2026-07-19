@@ -25,6 +25,7 @@ import { useState, useSyncExternalStore, useTransition } from "react";
 import {
   addStaffAction,
   setStaffActiveAction,
+  updateClinicProfileAction,
   updateStaffDetailsAction,
   updateStaffRolesAction,
 } from "./actions";
@@ -132,7 +133,12 @@ function Tabs({
         ]}
       />
 
-      {tab === "clinic" ? <ClinicTab clinic={clinic} /> : null}
+      {tab === "clinic" ? (
+        <ClinicTab
+          clinic={clinic}
+          isOwner={currentStaffRoles.includes("owner")}
+        />
+      ) : null}
       {tab === "staff" ? (
         <StaffTab
           staff={staff}
@@ -177,16 +183,36 @@ function ThemeControl() {
   );
 }
 
-function ClinicTab({ clinic }: { clinic: ClinicProfile | null }) {
+function ClinicTab({
+  clinic,
+  isOwner,
+}: {
+  clinic: ClinicProfile | null;
+  isOwner: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+
   return (
     <div className="flex flex-col gap-4">
       <Card className="p-5">
-        <h3 className="text-[17px] font-bold tracking-[-0.015em] text-ink">
-          Clinic profile
-        </h3>
-        <p className="mt-1 text-[14px] text-ink-secondary">
-          Prints on every prescription and bill.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-[17px] font-bold tracking-[-0.015em] text-ink">
+              Clinic profile
+            </h3>
+            <p className="mt-1 text-[14px] text-ink-secondary">
+              Prints on every prescription and bill.
+            </p>
+          </div>
+          {isOwner && clinic ? (
+            <button
+              onClick={() => setEditing(true)}
+              className="shrink-0 text-[13px] font-semibold text-accent"
+            >
+              Edit profile
+            </button>
+          ) : null}
+        </div>
         <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
           <Detail label="Name" value={clinic?.name ?? "—"} />
           <Detail
@@ -211,6 +237,10 @@ function ClinicTab({ clinic }: { clinic: ClinicProfile | null }) {
           />
         </dl>
       </Card>
+
+      {editing && clinic ? (
+        <EditClinicDialog clinic={clinic} onClose={() => setEditing(false)} />
+      ) : null}
 
       <ThemeControl />
 
@@ -499,6 +529,128 @@ function ReasonField({
         className="mt-1 w-full rounded-[var(--radius-control)] bg-surface-sunken px-3.5 py-3 text-[16px] text-ink outline-none placeholder:text-ink-secondary/60"
       />
     </label>
+  );
+}
+
+/**
+ * Clinic profile editing (§7.12, §9.4).
+ *
+ * Onboarding deliberately lets an owner skip everything but the name, so
+ * these fields must be fillable afterwards — otherwise "add it later in
+ * Settings" is the same dead end the doctor registration number was.
+ */
+function EditClinicDialog({
+  clinic,
+  onClose,
+}: {
+  clinic: ClinicProfile;
+  onClose: () => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState(clinic.name);
+  const [phone, setPhone] = useState(clinic.phone ?? "");
+  const [addressLine, setAddressLine] = useState(clinic.addressLine ?? "");
+  const [city, setCity] = useState(clinic.city ?? "");
+  const [pincode, setPincode] = useState(clinic.pincode ?? "");
+  const [cea, setCea] = useState(clinic.ceaRegistrationNo ?? "");
+  const [isGstRegistered, setIsGstRegistered] = useState(clinic.isGstRegistered);
+  const [gstin, setGstin] = useState(clinic.gstin ?? "");
+  const [reason, setReason] = useState("");
+
+  const handleSave = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await updateClinicProfileAction({
+        reason,
+        edits: {
+          name,
+          phone,
+          addressLine,
+          city,
+          pincode,
+          ceaRegistrationNo: cea,
+          isGstRegistered,
+          gstin,
+        },
+      });
+      if (result.ok) onClose();
+      else setError(result.error);
+    });
+  };
+
+  return (
+    <DialogShell onClose={onClose}>
+      <DialogTitle className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+        Clinic profile
+      </DialogTitle>
+      <p className="mt-1 text-[14px] text-ink-secondary">
+        These details print on every prescription and bill.
+      </p>
+
+      {error ? (
+        <div className="mt-3">
+          <AlertBanner title={error} />
+        </div>
+      ) : null}
+
+      <div className="mt-4 flex flex-col gap-3">
+        <TextField label="Name" value={name} onChange={setName} />
+        <TextField label="Phone" value={phone} onChange={setPhone} inputMode="tel" />
+        <TextField label="Address" value={addressLine} onChange={setAddressLine} />
+        <TextField label="City" value={city} onChange={setCity} />
+        <TextField label="Pincode" value={pincode} onChange={setPincode} />
+        <TextField
+          label="Clinical Establishments Act reg."
+          value={cea}
+          onChange={setCea}
+          placeholder="KA/CEA/2024/11872"
+        />
+
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={isGstRegistered}
+            onChange={(e) => setIsGstRegistered(e.target.checked)}
+            className="mt-1 h-5 w-5 accent-[var(--accent)]"
+          />
+          <span className="text-[15px] text-ink">
+            GST registered
+            <span className="mt-0.5 block text-[13px] text-ink-secondary">
+              Switching this off clears the GSTIN, so a stale number cannot
+              print on the next bill.
+            </span>
+          </span>
+        </label>
+
+        {isGstRegistered ? (
+          <TextField
+            label="GSTIN"
+            value={gstin}
+            onChange={setGstin}
+            placeholder="29ABCDE1234F1Z5"
+          />
+        ) : null}
+
+        <ReasonField
+          value={reason}
+          onChange={setReason}
+          placeholder="e.g. clinic moved premises in July"
+        />
+      </div>
+
+      <div className="mt-5 flex items-center gap-3">
+        <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
+        <div className="flex-1">
+          <PrimaryButton
+            disabled={reason.trim().length < 4 || isPending}
+            onClick={handleSave}
+          >
+            {isPending ? "Saving…" : "Save profile"}
+          </PrimaryButton>
+        </div>
+      </div>
+    </DialogShell>
   );
 }
 

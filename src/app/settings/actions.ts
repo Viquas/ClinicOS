@@ -9,6 +9,11 @@ import {
   type ManageStaffResult,
 } from "@/db/mutations/manage-staff";
 import {
+  updateClinicProfile,
+  type ClinicProfileEdits,
+  type UpdateClinicProfileResult,
+} from "@/db/mutations/update-clinic-profile";
+import {
   updateStaffDetails,
   type StaffDetailEdits,
   type UpdateStaffDetailsResult,
@@ -106,5 +111,28 @@ export async function setStaffActiveAction(input: {
   });
 
   if (result.ok) revalidatePath("/settings");
+  return result;
+}
+
+export async function updateClinicProfileAction(input: {
+  reason: string;
+  edits: ClinicProfileEdits;
+}): Promise<UpdateClinicProfileResult> {
+  const clinicId = await getActiveClinicId();
+  const auth = await requireCurrentStaffCan(clinicId, "settings:manage");
+  if (!auth.ok) return auth;
+
+  const result = await updateClinicProfile({
+    clinicId,
+    actorStaffId: auth.staff.id,
+    actorRoles: auth.staff.roles,
+    ...input,
+  });
+
+  if (result.ok) {
+    revalidatePath("/settings");
+    /* The nav header prints the clinic name, so every screen is stale. */
+    revalidatePath("/", "layout");
+  }
   return result;
 }
