@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { recordRevisions, staff } from "@/db/schema";
 
 export type RevisionRow = {
@@ -20,8 +21,9 @@ export async function getRecordRevisions(
   clinicId: string,
   entityTable: string,
   entityId: string,
+  tx: Executor = db,
 ): Promise<RevisionRow[]> {
-  const rows = await db
+  const rows = await tx
     .select({
       id: recordRevisions.id,
       at: recordRevisions.createdAt,

@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import {
   batches,
   billItems,
@@ -32,7 +33,12 @@ export type DashboardData = {
     quantity: number;
     unit: string;
   }[];
-  lowStock: { itemName: string; quantity: number; unit: string; reorder: number }[];
+  lowStock: {
+    itemName: string;
+    quantity: number;
+    unit: string;
+    reorder: number;
+  }[];
   visitsByDay: { date: string; count: number }[];
 };
 
@@ -41,8 +47,9 @@ export async function getDashboard(
   monthStart: string,
   monthEnd: string,
   today: string,
+  tx: Executor = db,
 ): Promise<DashboardData> {
-  const [visitCount] = await db
+  const [visitCount] = await tx
     .select({ n: sql<number>`count(*)::int` })
     .from(visits)
     .where(
@@ -56,7 +63,7 @@ export async function getDashboard(
 
   /* Revenue by line kind, joined bills → items and summed in SQL. `total` on
      a bill item is already the tax-inclusive line total. */
-  const revenue = await db
+  const revenue = await tx
     .select({
       kind: billItems.kind,
       sumPaise: sql<number>`coalesce(sum(${billItems.lineTotal}) * 100, 0)::bigint`,
@@ -80,7 +87,7 @@ export async function getDashboard(
     revenue.find((r) => r.kind === "goods")?.sumPaise ?? 0,
   );
 
-  const [newPatientCount] = await db
+  const [newPatientCount] = await tx
     .select({ n: sql<number>`count(*)::int` })
     .from(patients)
     .where(
@@ -94,7 +101,7 @@ export async function getDashboard(
     );
 
   /* Batches expiring within 60 days, still holding stock, not yet expired. */
-  const expiring = await db
+  const expiring = await tx
     .select({
       itemName: inventoryItems.name,
       batchNo: batches.batchNo,
@@ -128,7 +135,7 @@ export async function getDashboard(
   }));
 
   /* Low stock: live (unexpired) quantity at or below the reorder level. */
-  const stockLevels = await db
+  const stockLevels = await tx
     .select({
       name: inventoryItems.name,
       unit: inventoryItems.unit,
@@ -149,7 +156,12 @@ export async function getDashboard(
         isNull(inventoryItems.archivedAt),
       ),
     )
-    .groupBy(inventoryItems.id, inventoryItems.name, inventoryItems.unit, inventoryItems.reorderLevel);
+    .groupBy(
+      inventoryItems.id,
+      inventoryItems.name,
+      inventoryItems.unit,
+      inventoryItems.reorderLevel,
+    );
 
   const lowStock = stockLevels
     .filter((s) => Number(s.liveQty) <= Number(s.reorder))
@@ -160,7 +172,7 @@ export async function getDashboard(
       reorder: Number(s.reorder),
     }));
 
-  const byDay = await db
+  const byDay = await tx
     .select({
       date: visits.visitDate,
       count: sql<number>`count(*)::int`,

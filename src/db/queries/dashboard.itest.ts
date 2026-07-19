@@ -70,7 +70,12 @@ describe("getDashboard", () => {
   });
 
   it("is scoped to the clinic", async () => {
-    const data = await getDashboard(OTHER_CLINIC, MONTH_START, MONTH_END, TODAY);
+    const data = await getDashboard(
+      OTHER_CLINIC,
+      MONTH_START,
+      MONTH_END,
+      TODAY,
+    );
 
     expect(data.monthVisits).toBe(0);
     expect(data.monthRevenuePaise).toBe(0);

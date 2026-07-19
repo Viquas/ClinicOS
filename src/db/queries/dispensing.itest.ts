@@ -36,7 +36,9 @@ describe("getDispensingContext", () => {
 
   it("carries the schedule class through", async () => {
     const context = await getDispensingContext(CLINIC, TODAY);
-    const amox = context!.lines.find((l) => l.drugName === "Amoxicillin Susp.")!;
+    const amox = context!.lines.find(
+      (l) => l.drugName === "Amoxicillin Susp.",
+    )!;
 
     expect(amox.scheduleClass).toBe("h");
   });

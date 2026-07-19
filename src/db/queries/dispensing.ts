@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import {
   batches,
   doctors,
@@ -51,8 +52,9 @@ export type DispensingContext = {
 export async function getDispensingContext(
   clinicId: string,
   onDate: string,
+  tx: Executor = db,
 ): Promise<DispensingContext | null> {
-  const [head] = await db
+  const [head] = await tx
     .select({
       visitId: visits.id,
       tokenNumber: tokens.number,
@@ -80,7 +82,7 @@ export async function getDispensingContext(
 
   if (!head) return null;
 
-  const [rx] = await db
+  const [rx] = await tx
     .select({ id: prescriptions.id })
     .from(prescriptions)
     .where(
@@ -108,7 +110,7 @@ export async function getDispensingContext(
     };
   }
 
-  const itemRows = await db
+  const itemRows = await tx
     .select({
       prescriptionItemId: prescriptionItems.id,
       itemId: prescriptionItems.inventoryItemId,
@@ -137,7 +139,7 @@ export async function getDispensingContext(
     let itemBatches: BatchRow[] = [];
 
     if (item.itemId) {
-      const rows = await db
+      const rows = await tx
         .select({
           id: batches.id,
           batchNo: batches.batchNo,

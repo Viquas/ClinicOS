@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { patientFiles } from "@/db/schema";
 
 /**
@@ -22,8 +23,9 @@ export type PatientFileRow = {
 export async function getPatientFiles(
   clinicId: string,
   patientId: string,
+  tx: Executor = db,
 ): Promise<PatientFileRow[]> {
-  return db
+  return tx
     .select({
       id: patientFiles.id,
       kind: patientFiles.kind,

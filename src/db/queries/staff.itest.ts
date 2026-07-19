@@ -75,7 +75,10 @@ describe("resolveStaffIdentity", () => {
 
   it("returns null for an id that does not exist", async () => {
     expect(
-      await resolveStaffIdentity(CLINIC, "00000000-0000-0000-0000-000000000000"),
+      await resolveStaffIdentity(
+        CLINIC,
+        "00000000-0000-0000-0000-000000000000",
+      ),
     ).toBeNull();
   });
 });
@@ -88,7 +91,10 @@ describe("resolveFallbackStaff", () => {
   });
 
   it("skips a deactivated owner rather than crashing on them", async () => {
-    await db.update(staff).set({ isActive: false }).where(eq(staff.id, SAMEERA));
+    await db
+      .update(staff)
+      .set({ isActive: false })
+      .where(eq(staff.id, SAMEERA));
     try {
       const fallback = await resolveFallbackStaff(CLINIC);
       /* Someone active must still resolve, and not the deactivated owner —
@@ -96,7 +102,10 @@ describe("resolveFallbackStaff", () => {
       expect(fallback).not.toBeNull();
       expect(fallback?.id).not.toBe(SAMEERA);
     } finally {
-      await db.update(staff).set({ isActive: true }).where(eq(staff.id, SAMEERA));
+      await db
+        .update(staff)
+        .set({ isActive: true })
+        .where(eq(staff.id, SAMEERA));
     }
   });
 

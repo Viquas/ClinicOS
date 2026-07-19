@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { doctors, patients, staff, tokens, visits, vitals } from "@/db/schema";
 import type { TemplatePackOverride } from "@/lib/clinical/specialties";
 
@@ -39,15 +40,16 @@ export type ConsultContext = {
 export async function getConsultContext(
   clinicId: string,
   visitId: string,
+  tx: Executor = db,
 ): Promise<ConsultContext | null> {
-  const [visit] = await db
+  const [visit] = await tx
     .select({ patientId: visits.patientId, doctorId: visits.doctorId })
     .from(visits)
     .where(and(eq(visits.clinicId, clinicId), eq(visits.id, visitId)));
 
   if (!visit) return null;
 
-  const [token] = await db
+  const [token] = await tx
     .select({ id: tokens.id, state: tokens.state })
     .from(tokens)
     .where(and(eq(tokens.clinicId, clinicId), eq(tokens.visitId, visitId)))
@@ -56,7 +58,7 @@ export async function getConsultContext(
 
   if (!token) return null;
 
-  const [patient] = await db
+  const [patient] = await tx
     .select({
       id: patients.id,
       name: patients.name,
@@ -67,11 +69,13 @@ export async function getConsultContext(
       tags: patients.tags,
     })
     .from(patients)
-    .where(and(eq(patients.clinicId, clinicId), eq(patients.id, visit.patientId)));
+    .where(
+      and(eq(patients.clinicId, clinicId), eq(patients.id, visit.patientId)),
+    );
 
   if (!patient) return null;
 
-  const [doctor] = await db
+  const [doctor] = await tx
     .select({
       id: doctors.id,
       name: staff.name,
@@ -87,7 +91,7 @@ export async function getConsultContext(
 
   if (!doctor) return null;
 
-  const [vitalsRow] = await db
+  const [vitalsRow] = await tx
     .select({ values: vitals.values })
     .from(vitals)
     .where(and(eq(vitals.clinicId, clinicId), eq(vitals.visitId, visitId)));

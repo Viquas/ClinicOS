@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { consultations, patients, visits } from "@/db/schema";
 
 /**
@@ -20,8 +21,9 @@ export async function getDoctorFollowUpsToday(
   clinicId: string,
   doctorId: string,
   onDate: string,
+  tx: Executor = db,
 ): Promise<FollowUpRow[]> {
-  const rows = await db
+  const rows = await tx
     .select({
       patientId: patients.id,
       patientName: patients.name,

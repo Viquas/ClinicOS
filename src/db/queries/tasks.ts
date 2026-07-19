@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import {
   doctors,
   inventoryItems,
@@ -38,8 +39,9 @@ export type NursingTaskRow = {
 export async function getNursingTasks(
   clinicId: string,
   onDate: string,
+  tx: Executor = db,
 ): Promise<NursingTaskRow[]> {
-  const rows = await db
+  const rows = await tx
     .select({
       id: procedureTasks.id,
       visitId: procedureTasks.visitId,
@@ -66,10 +68,16 @@ export async function getNursingTasks(
        left join so it still renders rather than vanishing. */
     .leftJoin(
       tokens,
-      and(eq(tokens.visitId, procedureTasks.visitId), eq(tokens.tokenDate, onDate)),
+      and(
+        eq(tokens.visitId, procedureTasks.visitId),
+        eq(tokens.tokenDate, onDate),
+      ),
     )
     .where(
-      and(eq(procedureTasks.clinicId, clinicId), isNull(procedureTasks.archivedAt)),
+      and(
+        eq(procedureTasks.clinicId, clinicId),
+        isNull(procedureTasks.archivedAt),
+      ),
     )
     .orderBy(procedureTasks.createdAt);
 
@@ -79,7 +87,7 @@ export async function getNursingTasks(
     ...new Set(rows.map((r) => r.assignedToId).filter((v): v is string => !!v)),
   ];
   const assignedNames = assignedIds.length
-    ? await db
+    ? await tx
         .select({ id: staff.id, name: staff.name })
         .from(staff)
         .where(inArray(staff.id, assignedIds))
@@ -96,8 +104,12 @@ export async function getNursingTasks(
     ),
   ];
   const items = allItemIds.length
-    ? await db
-        .select({ id: inventoryItems.id, name: inventoryItems.name, unit: inventoryItems.unit })
+    ? await tx
+        .select({
+          id: inventoryItems.id,
+          name: inventoryItems.name,
+          unit: inventoryItems.unit,
+        })
         .from(inventoryItems)
         .where(inArray(inventoryItems.id, allItemIds))
     : [];
@@ -119,7 +131,9 @@ export async function getNursingTasks(
       quantity: c.quantity,
     })),
     state: r.state,
-    assignedToName: r.assignedToId ? (nameById.get(r.assignedToId) ?? null) : null,
+    assignedToName: r.assignedToId
+      ? (nameById.get(r.assignedToId) ?? null)
+      : null,
     orderedByDoctorName: r.doctorName,
     orderedAt: r.orderedAt,
   }));

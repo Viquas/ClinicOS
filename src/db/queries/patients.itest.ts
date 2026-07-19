@@ -200,7 +200,9 @@ describe("getPatientTimeline", () => {
         true,
       );
       expect(
-        after.filter((e) => e.visitId !== target.visitId).every((e) => !e.amended),
+        after
+          .filter((e) => e.visitId !== target.visitId)
+          .every((e) => !e.amended),
       ).toBe(true);
     } finally {
       await db

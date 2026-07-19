@@ -20,9 +20,7 @@ afterEach(async () => {
     .where(and(eq(tokens.clinicId, CLINIC), eq(tokens.tokenDate, TEST_DATE)));
 
   if (rows.length > 0) {
-    await db.delete(auditLog).where(
-      eq(auditLog.entityTable, "tokens"),
-    );
+    await db.delete(auditLog).where(eq(auditLog.entityTable, "tokens"));
     await db.delete(tokens).where(eq(tokens.tokenDate, TEST_DATE));
     await db.delete(visits).where(eq(visits.visitDate, TEST_DATE));
   }

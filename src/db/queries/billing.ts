@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import {
   batches,
   bills,
@@ -44,8 +45,9 @@ export type BillDraft = {
 export async function getBillDraft(
   clinicId: string,
   visitId: string,
+  tx: Executor = db,
 ): Promise<BillDraft | null> {
-  const [visit] = await db
+  const [visit] = await tx
     .select({ id: visits.id })
     .from(visits)
     .where(and(eq(visits.clinicId, clinicId), eq(visits.id, visitId)))
@@ -53,19 +55,19 @@ export async function getBillDraft(
 
   if (!visit) return null;
 
-  const [clinic] = await db
+  const [clinic] = await tx
     .select({ isGstRegistered: clinics.isGstRegistered })
     .from(clinics)
     .where(eq(clinics.id, clinicId))
     .limit(1);
 
-  const [tokenRow] = await db
+  const [tokenRow] = await tx
     .select({ number: tokens.number })
     .from(tokens)
     .where(and(eq(tokens.clinicId, clinicId), eq(tokens.visitId, visitId)))
     .limit(1);
 
-  const [doctorRow] = await db
+  const [doctorRow] = await tx
     .select({ name: staff.name })
     .from(visits)
     .innerJoin(doctors, eq(doctors.id, visits.doctorId))
@@ -73,7 +75,7 @@ export async function getBillDraft(
     .where(eq(visits.id, visitId))
     .limit(1);
 
-  const [existing] = await db
+  const [existing] = await tx
     .select({ id: bills.id })
     .from(bills)
     .where(
@@ -91,7 +93,7 @@ export async function getBillDraft(
    * bottles across two batches read as one line of three, which is what the
    * patient expects to see.
    */
-  const movements = await db
+  const movements = await tx
     .select({
       itemId: inventoryItems.id,
       name: inventoryItems.name,
@@ -115,7 +117,13 @@ export async function getBillDraft(
 
   const goodsByItem = new Map<
     string,
-    { name: string; strength: string | null; qty: number; mrp: number; gst: number }
+    {
+      name: string;
+      strength: string | null;
+      qty: number;
+      mrp: number;
+      gst: number;
+    }
   >();
 
   for (const m of movements) {
@@ -146,7 +154,7 @@ export async function getBillDraft(
    * count: a pending or in-progress procedure has not happened yet and must
    * not appear on what the patient owes.
    */
-  const completedProcedures = await db
+  const completedProcedures = await tx
     .select({
       taskId: procedureTasks.id,
       name: procedures.name,

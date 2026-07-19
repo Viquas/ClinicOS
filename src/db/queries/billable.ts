@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { patients, tokens, visits } from "@/db/schema";
 
 /**
@@ -14,12 +15,13 @@ import { patients, tokens, visits } from "@/db/schema";
 export async function getBillableVisit(
   clinicId: string,
   onDate: string,
+  tx: Executor = db,
 ): Promise<{
   visitId: string;
   tokenNumber: number;
   patientName: string;
 } | null> {
-  const [row] = await db
+  const [row] = await tx
     .select({
       visitId: visits.id,
       tokenNumber: tokens.number,

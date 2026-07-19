@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -25,11 +26,14 @@ export const dynamic = "force-dynamic";
 const TODAY = "2026-07-18";
 
 export default async function QueuePage() {
-  await requireRouteAccess(await getActiveClinicId(), "/queue");
-  const [queue, doctors] = await Promise.all([
-    getQueue(await getActiveClinicId(), TODAY),
-    getDoctors(await getActiveClinicId()),
-  ]);
+  const clinicId = await getActiveClinicId();
+  await requireRouteAccess(clinicId, "/queue");
+
+  /* One tenant transaction for the screen — both reads run under RLS on the
+     same connection (prd-real-auth.md Phase A). */
+  const [queue, doctors] = await tenantDb((tx) =>
+    Promise.all([getQueue(clinicId, TODAY, tx), getDoctors(clinicId, tx)]),
+  );
 
   if (doctors.length === 0) {
     return (

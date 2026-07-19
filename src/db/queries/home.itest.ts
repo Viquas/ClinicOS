@@ -37,8 +37,8 @@ describe("getDoctorFollowUpsToday", () => {
   });
 
   it("is scoped to the clinic", async () => {
-    expect(await getDoctorFollowUpsToday(OTHER_CLINIC, DR_SAMEERA, TODAY)).toEqual(
-      [],
-    );
+    expect(
+      await getDoctorFollowUpsToday(OTHER_CLINIC, DR_SAMEERA, TODAY),
+    ).toEqual([]);
   });
 });

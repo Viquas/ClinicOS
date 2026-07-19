@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { patients, procedureTasks, procedures, visits } from "@/db/schema";
 import {
   buildSchedule,
@@ -37,8 +38,9 @@ const DOSE_ID_BY_NAME = new Map(SCHEDULE.map((d) => [d.name, d.id]));
 export async function getVaccinationRoster(
   clinicId: string,
   asOf: string,
+  tx: Executor = db,
 ): Promise<ChildVaccinationRow[]> {
-  const children = await db
+  const children = await tx
     .select({
       id: patients.id,
       name: patients.name,
@@ -64,7 +66,7 @@ export async function getVaccinationRoster(
 
   if (withDob.length === 0) return [];
 
-  const givenRows = await db
+  const givenRows = await tx
     .select({
       patientId: visits.patientId,
       procedureName: procedures.name,
@@ -117,8 +119,9 @@ export async function getVaccinationRoster(
 /** Resolves the clinic's procedure row id for each vaccine dose, by name. */
 export async function getVaccineProcedureIds(
   clinicId: string,
+  tx: Executor = db,
 ): Promise<Map<string, string>> {
-  const rows = await db
+  const rows = await tx
     .select({ id: procedures.id, name: procedures.name })
     .from(procedures)
     .where(

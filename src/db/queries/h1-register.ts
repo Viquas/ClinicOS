@@ -1,6 +1,7 @@
 import "server-only";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { scheduleH1Register } from "@/db/schema";
 
 /**
@@ -24,8 +25,9 @@ export type H1Entry = {
 export async function getH1Register(
   clinicId: string,
   limit = 100,
+  tx: Executor = db,
 ): Promise<H1Entry[]> {
-  const rows = await db
+  const rows = await tx
     .select({
       id: scheduleH1Register.id,
       dispensedOn: scheduleH1Register.dispensedOn,
@@ -38,7 +40,10 @@ export async function getH1Register(
     })
     .from(scheduleH1Register)
     .where(eq(scheduleH1Register.clinicId, clinicId))
-    .orderBy(desc(scheduleH1Register.dispensedOn), desc(scheduleH1Register.createdAt))
+    .orderBy(
+      desc(scheduleH1Register.dispensedOn),
+      desc(scheduleH1Register.createdAt),
+    )
     .limit(limit);
 
   return rows.map((r) => ({

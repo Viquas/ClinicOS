@@ -1,6 +1,7 @@
 import "server-only";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { waMessages } from "@/db/schema";
 
 /**
@@ -24,8 +25,9 @@ export type MessageRow = {
 export async function getMessages(
   clinicId: string,
   limit = 50,
+  tx: Executor = db,
 ): Promise<MessageRow[]> {
-  return db
+  return tx
     .select({
       id: waMessages.id,
       toPhone: waMessages.toPhone,

@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { doctors, patients, tokens, visits, vitals } from "@/db/schema";
 import type { TemplatePackOverride } from "@/lib/clinical/specialties";
 
@@ -32,8 +33,9 @@ export type VitalsCaptureContext = {
 export async function getVitalsCaptureContext(
   clinicId: string,
   visitId: string,
+  tx: Executor = db,
 ): Promise<VitalsCaptureContext | null> {
-  const [visit] = await db
+  const [visit] = await tx
     .select({
       patientId: visits.patientId,
       doctorId: visits.doctorId,
@@ -44,7 +46,7 @@ export async function getVitalsCaptureContext(
 
   if (!visit) return null;
 
-  const [token] = await db
+  const [token] = await tx
     .select({ id: tokens.id, state: tokens.state })
     .from(tokens)
     .where(and(eq(tokens.clinicId, clinicId), eq(tokens.visitId, visitId)))
@@ -53,7 +55,7 @@ export async function getVitalsCaptureContext(
 
   if (!token) return null;
 
-  const [patient] = await db
+  const [patient] = await tx
     .select({
       id: patients.id,
       name: patients.name,
@@ -64,16 +66,21 @@ export async function getVitalsCaptureContext(
       allergies: patients.allergies,
     })
     .from(patients)
-    .where(and(eq(patients.clinicId, clinicId), eq(patients.id, visit.patientId)));
+    .where(
+      and(eq(patients.clinicId, clinicId), eq(patients.id, visit.patientId)),
+    );
 
   if (!patient) return null;
 
-  const [doctor] = await db
-    .select({ specialty: doctors.specialty, templatePack: doctors.templatePack })
+  const [doctor] = await tx
+    .select({
+      specialty: doctors.specialty,
+      templatePack: doctors.templatePack,
+    })
     .from(doctors)
     .where(and(eq(doctors.clinicId, clinicId), eq(doctors.id, visit.doctorId)));
 
-  const [priorVisit] = await db
+  const [priorVisit] = await tx
     .select({ visitId: vitals.visitId, values: vitals.values })
     .from(vitals)
     .innerJoin(visits, eq(visits.id, vitals.visitId))
@@ -106,8 +113,10 @@ export async function getVitalsCaptureContext(
     },
     doctorSpecialty: doctor?.specialty ?? null,
     templatePackOverride:
-      (doctor?.templatePack as { vitals?: string[]; diagnosisFavourites?: string[] } | null) ??
-      null,
+      (doctor?.templatePack as {
+        vitals?: string[];
+        diagnosisFavourites?: string[];
+      } | null) ?? null,
     priorValues: (priorVisit?.values as Record<string, string | number>) ?? {},
   };
 }

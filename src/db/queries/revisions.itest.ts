@@ -9,7 +9,9 @@ const STAFF = "22222222-0000-0000-0000-000000000001";
 const ENTITY_ID = "44444444-0000-0000-0000-000000000007";
 
 async function cleanup() {
-  await db.delete(recordRevisions).where(eq(recordRevisions.entityId, ENTITY_ID));
+  await db
+    .delete(recordRevisions)
+    .where(eq(recordRevisions.entityId, ENTITY_ID));
 }
 
 beforeEach(cleanup);

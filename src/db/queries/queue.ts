@@ -1,14 +1,8 @@
 import "server-only";
 import { and, asc, eq, isNull, max, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import {
-  doctors,
-  patients,
-  staff,
-  tokens,
-  visits,
-  vitals,
-} from "@/db/schema";
+import type { Executor } from "@/db/tenant-db";
+import { doctors, patients, staff, tokens, visits, vitals } from "@/db/schema";
 
 /**
  * Queue reads (§7.2).
@@ -52,10 +46,11 @@ export type QueueEntry = {
 export async function getQueue(
   clinicId: string,
   onDate: string,
+  tx: Executor = db,
 ): Promise<QueueEntry[]> {
   const now = Date.now();
 
-  const rows = await db
+  const rows = await tx
     .select({
       tokenId: tokens.id,
       visitId: tokens.visitId,
@@ -132,8 +127,8 @@ export async function getQueue(
  * tokens, but reception and the MR walk-in form must stop offering them
  * for new bookings the moment they're deactivated or lose the role.
  */
-export async function getBookableDoctors(clinicId: string) {
-  return db
+export async function getBookableDoctors(clinicId: string, tx: Executor = db) {
+  return tx
     .select({
       id: doctors.id,
       name: staff.name,
@@ -155,8 +150,8 @@ export async function getBookableDoctors(clinicId: string) {
     .orderBy(asc(staff.name));
 }
 
-export async function getDoctors(clinicId: string) {
-  return db
+export async function getDoctors(clinicId: string, tx: Executor = db) {
+  return tx
     .select({
       id: doctors.id,
       name: staff.name,
@@ -182,6 +177,7 @@ export async function getNextTokenNumber(
   clinicId: string,
   doctorId: string,
   onDate: string,
+  tx: Executor = db,
 ): Promise<number> {
   /*
    * max() rather than order-by-limit-1: it reads as what it is, and it counts
@@ -189,7 +185,7 @@ export async function getNextTokenNumber(
    * token's number be reissued the same day, so two patients would hear the
    * same number called.
    */
-  const [row] = await db
+  const [row] = await tx
     .select({ highest: max(tokens.number) })
     .from(tokens)
     .where(

@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { batches, inventoryItems } from "@/db/schema";
 
 /**
@@ -32,8 +33,11 @@ export type StockItem = {
   batches: BatchRow[];
 };
 
-export async function getStock(clinicId: string): Promise<StockItem[]> {
-  const rows = await db
+export async function getStock(
+  clinicId: string,
+  tx: Executor = db,
+): Promise<StockItem[]> {
+  const rows = await tx
     .select({
       itemId: inventoryItems.id,
       name: inventoryItems.name,

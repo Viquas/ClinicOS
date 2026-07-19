@@ -1,6 +1,7 @@
 import "server-only";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
+import type { Executor } from "@/db/tenant-db";
 import { medicalReps, mrCompanies, mrVisits } from "@/db/schema";
 
 /**
@@ -40,8 +41,9 @@ export async function getMrQueue(
   clinicId: string,
   dayStart: Date,
   dayEnd: Date,
+  tx: Executor = db,
 ): Promise<MrRepRow[]> {
-  const rows = await db
+  const rows = await tx
     .select({
       visitId: mrVisits.id,
       repId: medicalReps.id,
@@ -80,7 +82,7 @@ export async function getMrQueue(
   const repIds = [...new Set(rows.map((r) => r.repId))];
 
   const priorVisits = repIds.length
-    ? await db
+    ? await tx
         .select({ repId: mrVisits.repId, checkedInAt: mrVisits.checkedInAt })
         .from(mrVisits)
         .where(
@@ -113,13 +115,14 @@ export async function getMrQueue(
     state: row.seenAt ? "seen" : row.checkedInAt ? "waiting" : "booked",
     scheduledFor: row.scheduledFor,
     checkedInAt: row.checkedInAt,
-    lastVisit: lastVisitByRep.get(row.repId)?.toISOString().slice(0, 10) ?? null,
+    lastVisit:
+      lastVisitByRep.get(row.repId)?.toISOString().slice(0, 10) ?? null,
   }));
 }
 
 /** Every rep in the formulary — used to populate "log a walk-in". */
-export async function getRepDirectory(clinicId: string) {
-  return db
+export async function getRepDirectory(clinicId: string, tx: Executor = db) {
+  return tx
     .select({
       id: medicalReps.id,
       name: medicalReps.name,
@@ -127,6 +130,8 @@ export async function getRepDirectory(clinicId: string) {
     })
     .from(medicalReps)
     .innerJoin(mrCompanies, eq(mrCompanies.id, medicalReps.companyId))
-    .where(and(eq(medicalReps.clinicId, clinicId), isNull(medicalReps.archivedAt)))
+    .where(
+      and(eq(medicalReps.clinicId, clinicId), isNull(medicalReps.archivedAt)),
+    )
     .orderBy(medicalReps.name);
 }

@@ -145,8 +145,7 @@ export async function resolveFallbackStaff(
     )
     .orderBy(staff.createdAt);
 
-  const pick =
-    rows.find((r) => (r.roles ?? []).includes("owner")) ?? rows[0];
+  const pick = rows.find((r) => (r.roles ?? []).includes("owner")) ?? rows[0];
   if (!pick) return null;
 
   return {

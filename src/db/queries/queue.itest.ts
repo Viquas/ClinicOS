@@ -139,7 +139,10 @@ describe("getBookableDoctors", () => {
   });
 
   it("drops a deactivated doctor from bookable but keeps them in the full list", async () => {
-    await db.update(staff).set({ isActive: false }).where(eq(staff.id, ANAND_STAFF));
+    await db
+      .update(staff)
+      .set({ isActive: false })
+      .where(eq(staff.id, ANAND_STAFF));
     try {
       const bookable = await getBookableDoctors(CLINIC);
       expect(bookable.map((d) => d.name)).not.toContain("Dr. Anand Gowda");
@@ -148,17 +151,26 @@ describe("getBookableDoctors", () => {
       const full = await getDoctors(CLINIC);
       expect(full.map((d) => d.name)).toContain("Dr. Anand Gowda");
     } finally {
-      await db.update(staff).set({ isActive: true }).where(eq(staff.id, ANAND_STAFF));
+      await db
+        .update(staff)
+        .set({ isActive: true })
+        .where(eq(staff.id, ANAND_STAFF));
     }
   });
 
   it("drops a doctor whose doctor role was revoked", async () => {
-    await db.update(staff).set({ roles: ["front_desk"] }).where(eq(staff.id, ANAND_STAFF));
+    await db
+      .update(staff)
+      .set({ roles: ["front_desk"] })
+      .where(eq(staff.id, ANAND_STAFF));
     try {
       const bookable = await getBookableDoctors(CLINIC);
       expect(bookable.map((d) => d.name)).not.toContain("Dr. Anand Gowda");
     } finally {
-      await db.update(staff).set({ roles: ["doctor"] }).where(eq(staff.id, ANAND_STAFF));
+      await db
+        .update(staff)
+        .set({ roles: ["doctor"] })
+        .where(eq(staff.id, ANAND_STAFF));
     }
   });
 });
