@@ -1,4 +1,5 @@
 import { getBookableDoctors } from "@/db/queries/queue";
+import { clinicToday } from "@/lib/clinic-date";
 import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { getMrQueue, getRepDirectory } from "@/db/queries/mr";
@@ -12,9 +13,9 @@ import { MrBoard } from "./mr-board";
  */
 export const dynamic = "force-dynamic";
 
-const TODAY = "2026-07-18";
 
 export default async function MrPage() {
+  const TODAY = clinicToday();
   const clinicId = await getActiveClinicId();
   await requireRouteAccess(clinicId, "/mr");
   const dayStart = new Date(`${TODAY}T00:00:00+05:30`);

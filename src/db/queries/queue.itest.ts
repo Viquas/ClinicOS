@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { clinicToday } from "@/lib/clinic-date";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { staff } from "@/db/schema";
@@ -22,7 +23,7 @@ import {
 
 const CLINIC = "11111111-1111-1111-1111-111111111111";
 const OTHER_CLINIC = "99999999-9999-9999-9999-999999999999";
-const TODAY = "2026-07-18";
+const TODAY = clinicToday();
 
 beforeAll(() => {
   if (!process.env.DATABASE_URL) {

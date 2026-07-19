@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { clinicToday } from "@/lib/clinic-date";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -45,7 +46,7 @@ beforeEach(async () => {
       clinicId: CLINIC,
       patientId: AARAV,
       doctorId: DR_SAMEERA,
-      visitDate: "2026-07-18",
+      visitDate: clinicToday(),
     })
     .returning({ id: visits.id });
   visitId = visit.id;
@@ -56,7 +57,7 @@ beforeEach(async () => {
       clinicId: CLINIC,
       visitId,
       doctorId: DR_SAMEERA,
-      tokenDate: "2026-07-18",
+      tokenDate: clinicToday(),
       number: 92,
       state: "with_doctor",
     })

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { clinicToday } from "@/lib/clinic-date";
 import {
   issueToken,
   registerPatient,
@@ -12,7 +13,6 @@ import { requireCurrentStaffCan } from "@/lib/auth/guard";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { tenantDb } from "@/db/tenant-db";
 
-const TODAY = "2026-07-18";
 
 export async function searchAction(query: string) {
   /* Patient search reads through RLS (prd-real-auth.md Phase A) — this is
@@ -27,6 +27,7 @@ export async function issueTokenAction(
   doctorId: string,
   isPriority = false,
 ): Promise<IssueResult> {
+  const TODAY = clinicToday();
   const clinicId = await getActiveClinicId();
   const auth = await requireCurrentStaffCan(clinicId, "patient:register");
   if (!auth.ok) return auth;

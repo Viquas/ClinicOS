@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { clinicToday } from "@/lib/clinic-date";
 import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
@@ -14,9 +15,9 @@ import { PharmacyCounter } from "./pharmacy-counter";
  */
 export const dynamic = "force-dynamic";
 
-const TODAY = "2026-07-18";
 
 export default async function PharmacyPage() {
+  const TODAY = clinicToday();
   const clinicId = await getActiveClinicId();
   await requireRouteAccess(clinicId, "/pharmacy");
   const context = await tenantDb((tx) =>

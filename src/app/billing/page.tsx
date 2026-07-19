@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { clinicToday } from "@/lib/clinic-date";
 import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
@@ -15,9 +16,9 @@ import { BillingScreen } from "./billing-screen";
  */
 export const dynamic = "force-dynamic";
 
-const TODAY = "2026-07-18";
 
 export default async function BillingPage() {
+  const TODAY = clinicToday();
   const clinicId = await getActiveClinicId();
   await requireRouteAccess(clinicId, "/billing");
   const billable = await tenantDb((tx) =>

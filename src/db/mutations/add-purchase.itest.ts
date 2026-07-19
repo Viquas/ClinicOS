@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { clinicToday } from "@/lib/clinic-date";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLog, batches, stockMovements } from "@/db/schema";
@@ -8,7 +9,7 @@ const CLINIC = "11111111-1111-1111-1111-111111111111";
 const OTHER_CLINIC = "99999999-9999-9999-9999-999999999999";
 const STAFF = "22222222-0000-0000-0000-000000000004";
 const PARACETAMOL = "55555555-0000-0000-0000-000000000001";
-const TODAY = "2026-07-18";
+const TODAY = clinicToday();
 
 const created: string[] = [];
 

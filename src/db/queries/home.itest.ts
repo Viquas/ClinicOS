@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { clinicToday } from "@/lib/clinic-date";
 import { getDoctorFollowUpsToday } from "./home";
 
 const CLINIC = "11111111-1111-1111-1111-111111111111";
 const OTHER_CLINIC = "99999999-9999-9999-9999-999999999999";
 const DR_SAMEERA = "33333333-0000-0000-0000-000000000001";
 const DR_ANAND = "33333333-0000-0000-0000-000000000002";
-const TODAY = "2026-07-18";
+const TODAY = clinicToday();
 
 describe("getDoctorFollowUpsToday", () => {
   it("returns a follow-up scheduled for today", async () => {

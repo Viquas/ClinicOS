@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { clinicToday } from "@/lib/clinic-date";
 import {
   addPurchase,
   type AddPurchaseResult,
@@ -9,7 +10,6 @@ import { tenantDb } from "@/db/tenant-db";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
-const TODAY = "2026-07-18";
 
 export async function addPurchaseAction(input: {
   itemId: string;
@@ -20,6 +20,7 @@ export async function addPurchaseAction(input: {
   supplierName?: string | null;
   invoiceNo?: string | null;
 }): Promise<AddPurchaseResult> {
+  const TODAY = clinicToday();
   const clinicId = await getActiveClinicId();
   const auth = await requireCurrentStaffCan(clinicId, "inventory:purchase");
   if (!auth.ok) return auth;

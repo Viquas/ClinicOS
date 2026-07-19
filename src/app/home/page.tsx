@@ -1,4 +1,5 @@
 import { getDashboard } from "@/db/queries/dashboard";
+import { clinicToday, clinicMonthBounds } from "@/lib/clinic-date";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { getMessages } from "@/db/queries/messages";
 import { getDoctorFollowUpsToday } from "@/db/queries/home";
@@ -17,15 +18,14 @@ import { HomeScreen } from "./home-screen";
  */
 export const dynamic = "force-dynamic";
 
-const TODAY = "2026-07-18";
-const MONTH_START = "2026-07-01";
-const MONTH_END = "2026-07-31";
 
 export default async function HomePage({
   searchParams,
 }: {
   searchParams: Promise<{ denied?: string }>;
 }) {
+  const TODAY = clinicToday();
+  const { start: MONTH_START, end: MONTH_END } = clinicMonthBounds();
   const { denied } = await searchParams;
   const currentStaff = await getCurrentStaff(await getActiveClinicId());
   const roles = currentStaff.roles;

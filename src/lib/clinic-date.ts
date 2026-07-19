@@ -63,3 +63,13 @@ export function clinicMonthBounds(now: Date = new Date()): {
     end: `${y}-${String(m).padStart(2, "0")}-${end}`,
   };
 }
+
+/** "Tuesday, 18 July" — the header label, in the clinic's own timezone. */
+export function clinicDayLabel(today: string): string {
+  return new Date(`${today}T12:00:00Z`).toLocaleDateString("en-IN", {
+    timeZone: CLINIC_TIME_ZONE,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}

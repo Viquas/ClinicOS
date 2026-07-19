@@ -12,6 +12,11 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 import { SCHEDULE } from "../lib/clinical/vaccines";
+import {
+  clinicDaysAgo,
+  clinicMonthsAgo,
+  clinicToday,
+} from "../lib/clinic-date";
 
 /**
  * Seeds the development database with the same scenario the prototype's
@@ -60,7 +65,32 @@ const ITEM = {
   ors: "55555555-0000-0000-0000-000000000005",
 };
 
-const TODAY = "2026-07-18";
+/*
+ * Everything below is anchored to the clinic's real today rather than a fixed
+ * date, so the demo populates whenever it is seeded instead of only on one
+ * Tuesday in July 2026. The offsets carry the clinical meaning the old fixed
+ * dates encoded: a batch already expired, two expiring soon, ages that put
+ * each child at a specific point in the vaccination schedule.
+ */
+const TODAY = clinicToday();
+const daysAgo = clinicDaysAgo;
+const monthsAgo = clinicMonthsAgo;
+
+/* Dates of birth drive age, the vaccination schedule and the growth curve, so
+   they are named once and every derived date hangs off them. */
+const DOB = {
+  aarav: monthsAgo(40), // 3 y 4 m
+  diya: monthsAgo(85), // 7 y 1 m
+  bhavana: monthsAgo(14), // mid-schedule
+  nagaraj: daysAgo(46), // ~6 weeks
+};
+
+/** A dose given `days` after birth — the schedule is defined in weeks. */
+function afterBirth(dob: string, days: number): string {
+  const d = new Date(`${dob}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
 
 async function seed() {
   console.log("seeding...");
@@ -162,11 +192,11 @@ async function seed() {
         name: "Aarav Prakash",
         phone: "9845012233",
         sex: "male",
-        dateOfBirth: "2023-03-08",
+        dateOfBirth: DOB.aarav,
         guardianName: "Prakash M",
         allergies: ["Amoxicillin — rash"],
         tags: ["Chronic: asthma"],
-        consentGivenAt: "2023-04-20",
+        consentGivenAt: monthsAgo(39),
       },
       {
         id: PATIENT.diya,
@@ -175,9 +205,9 @@ async function seed() {
         /* Same phone as her brother — family grouping (§7.1). */
         phone: "9845012233",
         sex: "female",
-        dateOfBirth: "2019-06-11",
+        dateOfBirth: DOB.diya,
         guardianName: "Prakash M",
-        consentGivenAt: "2023-04-20",
+        consentGivenAt: monthsAgo(39),
       },
       {
         id: PATIENT.lakshmi,
@@ -188,7 +218,7 @@ async function seed() {
         ageYears: 62,
         allergies: ["Sulfa drugs"],
         tags: ["Chronic: diabetes", "Chronic: hypertension"],
-        consentGivenAt: "2024-01-15",
+        consentGivenAt: monthsAgo(30),
       },
       {
         /* Near-duplicate of Lakshmi Devi — drives the merge flow. */
@@ -198,7 +228,7 @@ async function seed() {
         phone: "9902334455",
         sex: "female",
         ageYears: 62,
-        consentGivenAt: "2026-03-02",
+        consentGivenAt: monthsAgo(4),
       },
       {
         id: PATIENT.manjunath,
@@ -207,7 +237,7 @@ async function seed() {
         phone: "9741556677",
         sex: "male",
         ageYears: 34,
-        consentGivenAt: "2025-11-02",
+        consentGivenAt: monthsAgo(8),
       },
       {
         id: PATIENT.bhavana,
@@ -215,10 +245,10 @@ async function seed() {
         name: "Bhavana R",
         phone: "9880778899",
         sex: "female",
-        dateOfBirth: "2025-05-14",
+        dateOfBirth: DOB.bhavana,
         guardianName: "Rekha R",
         tags: ["Vaccination due"],
-        consentGivenAt: "2025-05-14",
+        consentGivenAt: DOB.bhavana,
       },
       {
         id: PATIENT.nagaraj,
@@ -226,9 +256,9 @@ async function seed() {
         name: "Nagaraj K",
         phone: "9448112233",
         sex: "male",
-        dateOfBirth: "2026-06-02",
+        dateOfBirth: DOB.nagaraj,
         guardianName: "Kavitha N",
-        consentGivenAt: "2026-06-02",
+        consentGivenAt: DOB.nagaraj,
       },
     ])
     .onConflictDoNothing();
@@ -308,7 +338,7 @@ async function seed() {
         clinicId: CLINIC,
         itemId: ITEM.paracetamol,
         batchNo: "PC-1885",
-        expiryDate: "2026-06-30",
+        expiryDate: daysAgo(18), // already expired — blocks dispensing
         quantityReceived: "24",
         quantityRemaining: "9",
         costPerUnit: "38.50",
@@ -319,7 +349,7 @@ async function seed() {
         clinicId: CLINIC,
         itemId: ITEM.paracetamol,
         batchNo: "PC-2291",
-        expiryDate: "2026-08-07",
+        expiryDate: daysAgo(-20), // expiring soon — drives the warning
         quantityReceived: "24",
         quantityRemaining: "6",
         costPerUnit: "38.50",
@@ -330,7 +360,7 @@ async function seed() {
         clinicId: CLINIC,
         itemId: ITEM.paracetamol,
         batchNo: "PC-3140",
-        expiryDate: "2027-03-31",
+        expiryDate: monthsAgo(-8),
         quantityReceived: "24",
         quantityRemaining: "24",
         costPerUnit: "39.00",
@@ -341,7 +371,7 @@ async function seed() {
         clinicId: CLINIC,
         itemId: ITEM.amoxicillin,
         batchNo: "AM-8801",
-        expiryDate: "2027-01-31",
+        expiryDate: monthsAgo(-6),
         quantityReceived: "12",
         quantityRemaining: "11",
         costPerUnit: "52.00",
@@ -350,7 +380,7 @@ async function seed() {
         clinicId: CLINIC,
         itemId: ITEM.salbutamol,
         batchNo: "SB-4412",
-        expiryDate: "2026-11-30",
+        expiryDate: monthsAgo(-4),
         quantityReceived: "50",
         quantityRemaining: "4",
         costPerUnit: "11.50",
@@ -359,7 +389,7 @@ async function seed() {
         clinicId: CLINIC,
         itemId: ITEM.ondansetron,
         batchNo: "ON-1120",
-        expiryDate: "2026-07-31",
+        expiryDate: daysAgo(-13), // expiring soon
         quantityReceived: "100",
         quantityRemaining: "40",
         costPerUnit: "5.20",
@@ -368,7 +398,7 @@ async function seed() {
         clinicId: CLINIC,
         itemId: ITEM.ors,
         batchNo: "OR-7781",
-        expiryDate: "2028-02-28",
+        expiryDate: monthsAgo(-19),
         quantityReceived: "100",
         quantityRemaining: "62",
         costPerUnit: "14.00",
@@ -462,28 +492,28 @@ async function seed() {
        history is the mix a real asthmatic toddler generates: routine checks
        punctuated by wheeze episodes. */
     {
-      patientId: PATIENT.aarav, doctorId: DOCTOR.sameera, date: "2025-07-15",
+      patientId: PATIENT.aarav, doctorId: DOCTOR.sameera, date: monthsAgo(12),
       vitals: { weightKg: 12.4, heightCm: 88, tempC: 36.8 },
-      diagnosis: "Well-child visit", advice: "Growth on track. Continue current diet.", followUpDate: "2025-11-20",
+      diagnosis: "Well-child visit", advice: "Growth on track. Continue current diet.", followUpDate: monthsAgo(8),
     },
     {
-      patientId: PATIENT.aarav, doctorId: DOCTOR.sameera, date: "2025-11-20",
+      patientId: PATIENT.aarav, doctorId: DOCTOR.sameera, date: monthsAgo(8),
       vitals: { weightKg: 13.1, heightCm: 91, tempC: 36.9 },
-      diagnosis: "Mild intermittent asthma — review", advice: "Continue inhaled budesonide. Spacer technique reviewed with mother.", followUpDate: "2026-03-10",
+      diagnosis: "Mild intermittent asthma — review", advice: "Continue inhaled budesonide. Spacer technique reviewed with mother.", followUpDate: monthsAgo(4),
     },
     {
-      patientId: PATIENT.aarav, doctorId: DOCTOR.sameera, date: "2026-03-10",
+      patientId: PATIENT.aarav, doctorId: DOCTOR.sameera, date: monthsAgo(4),
       vitals: { weightKg: 13.6, heightCm: 94, tempC: 37.0 },
       diagnosis: "Well-child visit", advice: "No wheeze since last visit. Step down review in six months.", followUpDate: null,
     },
     /* Bhavana — 14 m today at 8.9 kg. */
     {
-      patientId: PATIENT.bhavana, doctorId: DOCTOR.sameera, date: "2025-11-05",
+      patientId: PATIENT.bhavana, doctorId: DOCTOR.sameera, date: monthsAgo(8),
       vitals: { weightKg: 7.2, heightCm: 66, tempC: 36.7 },
-      diagnosis: "Well-child visit — 6 months", advice: "Start complementary feeding. Continue breastfeeding on demand.", followUpDate: "2026-02-18",
+      diagnosis: "Well-child visit — 6 months", advice: "Start complementary feeding. Continue breastfeeding on demand.", followUpDate: monthsAgo(5),
     },
     {
-      patientId: PATIENT.bhavana, doctorId: DOCTOR.sameera, date: "2026-02-18",
+      patientId: PATIENT.bhavana, doctorId: DOCTOR.sameera, date: monthsAgo(5),
       vitals: { weightKg: 8.0, heightCm: 71, tempC: 36.8 },
       diagnosis: "Acute gastroenteritis", advice: "ORS after each loose stool. Return if unable to keep fluids down.", followUpDate: null,
     },
@@ -494,7 +524,7 @@ async function seed() {
        of who was signed in — the same starved-data gap as the growth trends
        and consultations fixes earlier in this project. */
     {
-      patientId: PATIENT.diya, doctorId: DOCTOR.sameera, date: "2026-07-11",
+      patientId: PATIENT.diya, doctorId: DOCTOR.sameera, date: daysAgo(7),
       vitals: { tempC: 39.1, weightKg: 11.8 },
       diagnosis: "Viral fever", advice: "Paracetamol SOS, plenty of fluids. Review in a week if fever persists.", followUpDate: TODAY,
     },
@@ -556,7 +586,7 @@ async function seed() {
       label: "CBC — Mysuru Diagnostics",
       storagePath: `${CLINIC}/${PATIENT.aarav}/cbc-2026-03-10.pdf`,
       uploadedByStaffId: STAFF.latha,
-      createdAt: new Date("2026-03-10T11:20:00+05:30"),
+      createdAt: new Date(`${monthsAgo(4)}T11:20:00+05:30`),
     },
     {
       clinicId: CLINIC,
@@ -565,7 +595,7 @@ async function seed() {
       label: "Prescription from ENT consult",
       storagePath: `${CLINIC}/${PATIENT.aarav}/ent-rx-2025-11-20.jpg`,
       uploadedByStaffId: STAFF.rekha,
-      createdAt: new Date("2025-11-20T16:05:00+05:30"),
+      createdAt: new Date(`${monthsAgo(8)}T16:05:00+05:30`),
     },
     {
       clinicId: CLINIC,
@@ -574,7 +604,7 @@ async function seed() {
       label: "Rash on forearm",
       storagePath: `${CLINIC}/${PATIENT.bhavana}/rash-2026-02-18.jpg`,
       uploadedByStaffId: STAFF.latha,
-      createdAt: new Date("2026-02-18T10:40:00+05:30"),
+      createdAt: new Date(`${monthsAgo(5)}T10:40:00+05:30`),
     },
   ]);
 
@@ -734,7 +764,7 @@ async function seed() {
    * billing screens read from real dispenses.
    */
   if (bhavanaVisitId) {
-    const bhavanaDob = "2025-05-14";
+    const bhavanaDob = DOB.bhavana;
     for (const doseName of ["BCG", "Hepatitis B — birth", "OPV — 0"]) {
       const procId = vaccineProcedureIdByName.get(doseName);
       if (!procId) continue;
@@ -751,7 +781,7 @@ async function seed() {
   }
 
   /*
-   * Aarav (b. 2023-03-08) is the "genuinely behind, but weeks behind" case —
+   * Aarav is the "genuinely behind, but weeks behind" case —
    * complete through the 10-week visit, then defaulted. Without this, every
    * one of his 21 doses reads as un-given and the due-list shows him three
    * YEARS overdue on all of them, which is precisely the case the module's
@@ -760,17 +790,18 @@ async function seed() {
    */
   if (aaravVisitId) {
     const aaravDoses: [string, string][] = [
-      ["BCG", "2023-03-08"],
-      ["Hepatitis B — birth", "2023-03-08"],
-      ["OPV — 0", "2023-03-08"],
-      ["Pentavalent 1", "2023-04-19"],
-      ["OPV 1", "2023-04-19"],
-      ["Rotavirus 1", "2023-04-19"],
-      ["PCV 1", "2023-04-19"],
-      ["Pentavalent 2", "2023-05-17"],
-      ["OPV 2", "2023-05-17"],
-      ["Rotavirus 2", "2023-05-17"],
-      ["PCV 2", "2023-05-17"],
+      /* Birth doses, then 6-week and 10-week visits — then he defaults. */
+      ["BCG", afterBirth(DOB.aarav, 0)],
+      ["Hepatitis B — birth", afterBirth(DOB.aarav, 0)],
+      ["OPV — 0", afterBirth(DOB.aarav, 0)],
+      ["Pentavalent 1", afterBirth(DOB.aarav, 42)],
+      ["OPV 1", afterBirth(DOB.aarav, 42)],
+      ["Rotavirus 1", afterBirth(DOB.aarav, 42)],
+      ["PCV 1", afterBirth(DOB.aarav, 42)],
+      ["Pentavalent 2", afterBirth(DOB.aarav, 70)],
+      ["OPV 2", afterBirth(DOB.aarav, 70)],
+      ["Rotavirus 2", afterBirth(DOB.aarav, 70)],
+      ["PCV 2", afterBirth(DOB.aarav, 70)],
     ];
 
     for (const [doseName, givenOn] of aaravDoses) {
@@ -870,9 +901,9 @@ async function seed() {
       clinicId: CLINIC,
       repId: kiran.id,
       doctorId: DOCTOR.sameera,
-      scheduledFor: new Date("2026-05-12T14:00:00+05:30"),
-      checkedInAt: new Date("2026-05-12T14:05:00+05:30"),
-      seenAt: new Date("2026-05-12T14:20:00+05:30"),
+      scheduledFor: new Date(`${monthsAgo(2)}T14:00:00+05:30`),
+      checkedInAt: new Date(`${monthsAgo(2)}T14:05:00+05:30`),
+      seenAt: new Date(`${monthsAgo(2)}T14:20:00+05:30`),
     },
   ]);
 

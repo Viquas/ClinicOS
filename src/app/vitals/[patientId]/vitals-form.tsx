@@ -14,7 +14,6 @@ import { useState, useTransition } from "react";
 import { recordVitalsAction } from "./actions";
 
 /* Scenario date — becomes the real clock once the seed uses live dates. */
-const TODAY = "2026-07-18";
 
 type Patient = {
   id: string;
@@ -34,6 +33,7 @@ type Patient = {
  * doctor's specialty swaps this screen with no code change here.
  */
 export function VitalsForm({
+  today,
   visitId,
   tokenId,
   patient,
@@ -41,6 +41,9 @@ export function VitalsForm({
   showGrowthTrend,
   priorValues,
 }: {
+  /* The clinic's date, resolved on the server and passed down so an
+     age label cannot disagree between server and client render. */
+  today: string;
   visitId: string;
   tokenId: string;
   patient: Patient;
@@ -57,7 +60,7 @@ export function VitalsForm({
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
 
   const ageMonths = patient.dateOfBirth
-    ? monthsBetween(patient.dateOfBirth, TODAY)
+    ? monthsBetween(patient.dateOfBirth, today)
     : undefined;
 
   const toggleSkip = (key: string) =>
@@ -113,7 +116,7 @@ export function VitalsForm({
     <>
       <IdentityHeader
         name={patient.name}
-        ageLabel={ageLabel(patient, TODAY)}
+        ageLabel={ageLabel(patient, today)}
         sex={titleCase(patient.sex)}
         phone={patient.phone}
       />

@@ -1,5 +1,7 @@
 "use client";
 
+import { clinicDayLabel } from "@/lib/clinic-date";
+
 import { ScreenHeader } from "@/components/screen-header";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Card, SectionLabel } from "@/components/ui/card";
@@ -35,7 +37,15 @@ export type TaskRow = {
  * dispense) and adds the procedure's charge to the bill — the button says so,
  * because that consequence is not obvious from "Mark done".
  */
-export function TasksBoard({ tasks }: { tasks: TaskRow[] }) {
+export function TasksBoard({
+  tasks,
+  today,
+}: {
+  tasks: TaskRow[];
+  /* The clinic's date, resolved on the server so the header label cannot
+     disagree between server and client render. */
+  today: string;
+}) {
   const [rows, setRows] = useState(tasks);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -77,7 +87,7 @@ export function TasksBoard({ tasks }: { tasks: TaskRow[] }) {
     <>
       <ScreenHeader
         title="Nursing tasks"
-        subtitle={`${active.length} to do · Tuesday, 18 July`}
+        subtitle={`${active.length} to do · ${clinicDayLabel(today)}`}
       />
 
       {error ? (

@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { clinicToday } from "@/lib/clinic-date";
 import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
@@ -23,9 +24,9 @@ export const dynamic = "force-dynamic";
  * the queue in it — which matters on a clinic tablet on tier-3 connectivity.
  */
 
-const TODAY = "2026-07-18";
 
 export default async function QueuePage() {
+  const TODAY = clinicToday();
   const clinicId = await getActiveClinicId();
   await requireRouteAccess(clinicId, "/queue");
 
@@ -47,5 +48,5 @@ export default async function QueuePage() {
     );
   }
 
-  return <QueueBoard queue={queue} doctors={doctors} />;
+  return <QueueBoard queue={queue} doctors={doctors} today={TODAY} />;
 }

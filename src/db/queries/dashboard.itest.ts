@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { clinicToday } from "@/lib/clinic-date";
 import { getDashboard } from "./dashboard";
 
 const CLINIC = "11111111-1111-1111-1111-111111111111";
 const OTHER_CLINIC = "99999999-9999-9999-9999-999999999999";
 const MONTH_START = "2026-07-01";
 const MONTH_END = "2026-07-31";
-const TODAY = "2026-07-18";
+const TODAY = clinicToday();
 
 describe("getDashboard", () => {
   it("counts the month's visits", async () => {

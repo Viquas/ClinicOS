@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { clinicMonthsAgo, clinicToday } from "@/lib/clinic-date";
 import { getVaccinationRoster, getVaccineProcedureIds } from "./vaccinations";
 
+const BHAVANA_DOB = clinicMonthsAgo(14);
 const CLINIC = "11111111-1111-1111-1111-111111111111";
 const OTHER_CLINIC = "99999999-9999-9999-9999-999999999999";
-const TODAY = "2026-07-18";
+const TODAY = clinicToday();
 
 describe("getVaccinationRoster", () => {
   it("includes every patient with a recorded date of birth", async () => {
@@ -28,7 +30,7 @@ describe("getVaccinationRoster", () => {
 
     const bcg = bhavana.schedule.find((s) => s.dose.id === "bcg")!;
     expect(bcg.status).toBe("given");
-    expect(bcg.givenOn).toBe("2025-05-14");
+    expect(bcg.givenOn).toBe(BHAVANA_DOB);
 
     const hepb = bhavana.schedule.find((s) => s.dose.id === "hepb-0")!;
     expect(hepb.status).toBe("given");

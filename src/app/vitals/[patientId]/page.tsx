@@ -1,4 +1,5 @@
 import { getVitalsCaptureContext } from "@/db/queries/vitals-capture";
+import { clinicToday } from "@/lib/clinic-date";
 import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { resolveSpecialtyPack } from "@/lib/clinical/specialties";
@@ -20,6 +21,7 @@ export default async function VitalsPage({
   params: Promise<{ patientId: string }>;
   searchParams: Promise<{ visitId?: string }>;
 }) {
+  const TODAY = clinicToday();
   const { patientId } = await params;
   const { visitId } = await searchParams;
   if (!visitId) notFound();
@@ -38,6 +40,7 @@ export default async function VitalsPage({
 
   return (
     <VitalsForm
+      today={TODAY}
       visitId={visitId}
       tokenId={ctx.tokenId}
       patient={ctx.patient}

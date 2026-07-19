@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { clinicToday, clinicMonthBounds } from "@/lib/clinic-date";
 import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
@@ -19,9 +20,6 @@ import { IndianRupee, Package, Stethoscope, Users } from "lucide-react";
  */
 export const dynamic = "force-dynamic";
 
-const MONTH_START = "2026-07-01";
-const MONTH_END = "2026-07-31";
-const TODAY = "2026-07-18";
 
 /**
  * Adaptive currency for the headline stats.
@@ -41,6 +39,8 @@ function money(paise: number): { value: string; unit?: string } {
 }
 
 export default async function DashboardPage() {
+  const TODAY = clinicToday();
+  const { start: MONTH_START, end: MONTH_END } = clinicMonthBounds();
   const clinicId = await getActiveClinicId();
   await requireRouteAccess(clinicId, "/dashboard");
   const data = await tenantDb((tx) =>

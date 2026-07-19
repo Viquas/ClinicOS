@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { clinicToday } from "@/lib/clinic-date";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLog, procedureTasks, visits } from "@/db/schema";
@@ -29,7 +30,7 @@ describe("recordVaccineDose", () => {
       doseId: "mmr-1",
       doctorId: DOCTOR,
       actorStaffId: STAFF,
-      givenOn: "2026-07-18",
+      givenOn: clinicToday(),
     });
 
     expect(result.ok).toBe(true);
@@ -51,7 +52,7 @@ describe("recordVaccineDose", () => {
       doseId: "typhoid",
       doctorId: DOCTOR,
       actorStaffId: STAFF,
-      givenOn: "2026-07-18",
+      givenOn: clinicToday(),
     });
     if (!result.ok) throw new Error("expected success");
 
@@ -61,12 +62,12 @@ describe("recordVaccineDose", () => {
       .where(eq(procedureTasks.id, result.taskId));
     createdVisitIds.push(task.visitId);
 
-    const roster = await getVaccinationRoster(CLINIC, "2026-07-18");
+    const roster = await getVaccinationRoster(CLINIC, clinicToday());
     const aarav = roster.find((r) => r.name === "Aarav Prakash")!;
     const typhoid = aarav.schedule.find((s) => s.dose.id === "typhoid")!;
 
     expect(typhoid.status).toBe("given");
-    expect(typhoid.givenOn).toBe("2026-07-18");
+    expect(typhoid.givenOn).toBe(clinicToday());
   });
 
   it("logs the dose with the antigen name", async () => {
@@ -76,7 +77,7 @@ describe("recordVaccineDose", () => {
       doseId: "hepa-1",
       doctorId: DOCTOR,
       actorStaffId: STAFF,
-      givenOn: "2026-07-18",
+      givenOn: clinicToday(),
     });
     if (!result.ok) throw new Error("expected success");
 

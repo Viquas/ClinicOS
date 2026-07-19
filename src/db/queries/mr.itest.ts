@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
+import {
+  clinicDaysAgo,
+  clinicMonthsAgo,
+  clinicToday,
+} from "@/lib/clinic-date";
 import { getMrQueue, getRepDirectory } from "./mr";
 
 const CLINIC = "11111111-1111-1111-1111-111111111111";
 const OTHER_CLINIC = "99999999-9999-9999-9999-999999999999";
 
-const DAY_START = new Date("2026-07-18T00:00:00+05:30");
-const DAY_END = new Date("2026-07-19T00:00:00+05:30");
+const TODAY = clinicToday();
+const DAY_START = new Date(`${TODAY}T00:00:00+05:30`);
+const DAY_END = new Date(`${clinicDaysAgo(-1)}T00:00:00+05:30`);
 
 describe("getMrQueue", () => {
   it("returns today's rep visits with the right derived state", async () => {
@@ -26,7 +32,9 @@ describe("getMrQueue", () => {
   it("finds Kiran's prior visit date, excluding today", async () => {
     const queue = await getMrQueue(CLINIC, DAY_START, DAY_END);
     const kiran = queue.find((r) => r.name === "Kiran Shetty")!;
-    expect(kiran.lastVisit).toBe("2026-05-12");
+    /* Seeded two months back; asserted as "before today" rather than a
+       literal, since the seed is now anchored to the real date. */
+    expect(kiran.lastVisit).toBe(clinicMonthsAgo(2));
   });
 
   it("returns no prior visit for a rep with no history before today", async () => {

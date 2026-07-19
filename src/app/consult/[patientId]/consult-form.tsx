@@ -15,7 +15,6 @@ import { useState, useTransition } from "react";
 import { recordConsultationAction } from "./actions";
 
 /* Scenario date — becomes the real clock once the seed uses live dates. */
-const TODAY = "2026-07-18";
 
 type Patient = {
   id: string;
@@ -64,6 +63,7 @@ type Line = {
  * `canPrescribe` gates.
  */
 export function ConsultForm({
+  today,
   visitId,
   tokenId,
   doctorId,
@@ -73,6 +73,9 @@ export function ConsultForm({
   diagnosisFavourites,
   stock,
 }: {
+  /* The clinic's date, resolved on the server and passed down so an
+     age label cannot disagree between server and client render. */
+  today: string;
   visitId: string;
   tokenId: string;
   doctorId: string;
@@ -157,7 +160,7 @@ export function ConsultForm({
     <>
       <IdentityHeader
         name={patient.name}
-        ageLabel={ageLabel(patient, TODAY)}
+        ageLabel={ageLabel(patient, today)}
         sex={titleCase(patient.sex)}
         /* Consultation room is private — front desk masks, this does not. */
         maskContact={false}

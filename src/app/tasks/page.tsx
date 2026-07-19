@@ -1,4 +1,5 @@
 import { getNursingTasks } from "@/db/queries/tasks";
+import { clinicToday } from "@/lib/clinic-date";
 import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
@@ -11,15 +12,16 @@ import { TasksBoard } from "./tasks-board";
  */
 export const dynamic = "force-dynamic";
 
-const TODAY = "2026-07-18";
 
 export default async function TasksPage() {
+  const TODAY = clinicToday();
   const clinicId = await getActiveClinicId();
   await requireRouteAccess(clinicId, "/tasks");
   const tasks = await tenantDb((tx) => getNursingTasks(clinicId, TODAY, tx));
 
   return (
     <TasksBoard
+      today={TODAY}
       tasks={tasks.map((t) => ({
         ...t,
         orderedAt: t.orderedAt.toISOString(),

@@ -1,4 +1,5 @@
 import { getConsultContext } from "@/db/queries/consult";
+import { clinicToday } from "@/lib/clinic-date";
 import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { getStock } from "@/db/queries/pharmacy";
@@ -21,6 +22,7 @@ export default async function ConsultPage({
   params: Promise<{ patientId: string }>;
   searchParams: Promise<{ visitId?: string }>;
 }) {
+  const TODAY = clinicToday();
   const { patientId } = await params;
   const { visitId } = await searchParams;
   if (!visitId) notFound();
@@ -45,6 +47,7 @@ export default async function ConsultPage({
 
   return (
     <ConsultForm
+      today={TODAY}
       visitId={visitId}
       tokenId={ctx.tokenId}
       doctorId={ctx.doctor.id}

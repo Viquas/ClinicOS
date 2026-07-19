@@ -1,5 +1,7 @@
 "use client";
 
+import { clinicDayLabel } from "@/lib/clinic-date";
+
 import { ScreenHeader } from "@/components/screen-header";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Card } from "@/components/ui/card";
@@ -19,7 +21,6 @@ import Link from "next/link";
 import { useState } from "react";
 
 /* Scenario date — becomes the real clock once the seed uses live dates. */
-const TODAY = "2026-07-18";
 
 type Doctor = {
   id: string;
@@ -36,9 +37,13 @@ type Doctor = {
 export function QueueBoard({
   queue,
   doctors,
+  today,
 }: {
   queue: QueueEntry[];
   doctors: Doctor[];
+  /* The clinic's date, resolved on the server and passed down so an
+     age label cannot disagree between server and client render. */
+  today: string;
 }) {
   const [doctorId, setDoctorId] = useState(doctors[0].id);
 
@@ -51,7 +56,7 @@ export function QueueBoard({
     <>
       <ScreenHeader
         title="Queue"
-        subtitle={`${entries.length} in queue · Tuesday, 18 July`}
+        subtitle={`${entries.length} in queue · ${clinicDayLabel(today)}`}
       />
 
       <SegmentedControl
@@ -70,7 +75,7 @@ export function QueueBoard({
           <p className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-[0.05em] text-ink-secondary">
             In consultation
           </p>
-          <QueueCard entry={active} isActive />
+          <QueueCard entry={active} today={today} isActive />
         </div>
       ) : null}
 
@@ -86,7 +91,7 @@ export function QueueBoard({
       ) : (
         <div className="flex flex-col gap-3">
           {waiting.map((entry) => (
-            <QueueCard key={entry.tokenId} entry={entry} />
+            <QueueCard key={entry.tokenId} entry={entry} today={today} />
           ))}
         </div>
       )}
@@ -96,9 +101,11 @@ export function QueueBoard({
 
 function QueueCard({
   entry,
+  today,
   isActive = false,
 }: {
   entry: QueueEntry;
+  today: string;
   isActive?: boolean;
 }) {
   const state = TOKEN_STATE_LABEL[entry.state] ?? {
@@ -130,7 +137,7 @@ function QueueCard({
           </div>
 
           <p className="mt-0.5 text-[14px] text-ink-secondary">
-            {ageLabel(entry, TODAY)} · {titleCase(entry.patientSex)} ·{" "}
+            {ageLabel(entry, today)} · {titleCase(entry.patientSex)} ·{" "}
             {/* Masked: the queue is visible across the counter (§8.3 rule 5). */}
             {maskPhone(entry.patientPhone)}
           </p>
