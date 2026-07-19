@@ -8,6 +8,12 @@ import {
   type AddStaffResult,
   type ManageStaffResult,
 } from "@/db/mutations/manage-staff";
+import {
+  updateStaffDetails,
+  type StaffDetailEdits,
+  type UpdateStaffDetailsResult,
+} from "@/db/mutations/update-staff-details";
+import { getCurrentStaff } from "@/lib/auth/current-staff";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
 import type { StaffRole } from "@/lib/auth/claims";
 
@@ -55,6 +61,33 @@ export async function addStaffAction(input: {
   });
 
   if (result.ok) revalidatePath("/settings");
+  return result;
+}
+
+/**
+ * Profile details, unlike roles, are not owner-only: a doctor entering their
+ * own council registration is the normal path (§9.2). The mutation decides
+ * owner-or-self, so this resolves the identity without demanding
+ * staff:manage — otherwise a doctor could never unblock their own prescribing.
+ */
+export async function updateStaffDetailsAction(input: {
+  staffId: string;
+  reason: string;
+  edits: StaffDetailEdits;
+}): Promise<UpdateStaffDetailsResult> {
+  const currentStaff = await getCurrentStaff(CLINIC_ID);
+
+  const result = await updateStaffDetails({
+    clinicId: CLINIC_ID,
+    actorStaffId: currentStaff.id,
+    actorRoles: currentStaff.roles,
+    ...input,
+  });
+
+  if (result.ok) {
+    revalidatePath("/settings");
+    revalidatePath("/home");
+  }
   return result;
 }
 

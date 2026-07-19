@@ -25,6 +25,7 @@ import { useState, useSyncExternalStore, useTransition } from "react";
 import {
   addStaffAction,
   setStaffActiveAction,
+  updateStaffDetailsAction,
   updateStaffRolesAction,
 } from "./actions";
 
@@ -241,11 +242,12 @@ function StaffTab({
   lastChangeByStaffId: Record<string, LastChange>;
 }) {
   const [editing, setEditing] = useState<StaffRow | null>(null);
+  const [editingDetails, setEditingDetails] = useState<StaffRow | null>(null);
   const [togglingActive, setTogglingActive] = useState<StaffRow | null>(null);
   const [adding, setAdding] = useState(false);
 
   const incompleteDoctor = staff.find(
-    (s) => s.isDoctor && !s.registrationNo,
+    (s) => s.isDoctor && !s.registrationNo && s.isActive,
   );
 
   return (
@@ -254,7 +256,18 @@ function StaffTab({
         <div className="mb-4">
           <AlertBanner
             title={`${incompleteDoctor.name} cannot issue prescriptions`}
-            detail="A state medical council registration number is required on every prescription. Add it to unblock."
+            detail="A state medical council registration number is required on every prescription."
+            action={
+              /* This banner used to say "add it to unblock" while offering
+                 nowhere to add it — the only fix was a manual database
+                 UPDATE. It now opens the form it names. */
+              <button
+                onClick={() => setEditingDetails(incompleteDoctor)}
+                className="text-[14px] font-semibold text-accent underline underline-offset-2"
+              >
+                Add registration number
+              </button>
+            }
           />
         </div>
       ) : null}
@@ -279,6 +292,16 @@ function StaffTab({
                 <p className="text-[14px] text-ink-secondary">
                   {member.qualification ?? "—"} · {member.phone}
                 </p>
+                {member.isDoctor ? (
+                  <p className="mt-0.5 text-[13px] text-ink-secondary">
+                    {member.specialty
+                      ? member.specialty.replace(/_/g, " ")
+                      : "no specialty"}
+                    {member.registrationNo
+                      ? ` · ${member.registrationNo}`
+                      : ""}
+                  </p>
+                ) : null}
               </div>
               <div className="flex shrink-0 gap-1.5">
                 {member.id === currentStaffId ? (
@@ -311,9 +334,19 @@ function StaffTab({
               </p>
             ) : null}
 
-            {isOwner ? (
-              <div className="mt-3 flex items-center gap-4 border-t border-hairline pt-3">
+            {/* Details are owner-or-self (a doctor enters their own council
+                registration); roles and deactivation stay owner-only. */}
+            {isOwner || member.id === currentStaffId ? (
+              <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-hairline pt-3">
                 {member.isActive ? (
+                  <button
+                    onClick={() => setEditingDetails(member)}
+                    className="text-[13px] font-semibold text-accent"
+                  >
+                    Edit details
+                  </button>
+                ) : null}
+                {isOwner && member.isActive ? (
                   <button
                     onClick={() => setEditing(member)}
                     className="text-[13px] font-semibold text-accent"
@@ -321,7 +354,7 @@ function StaffTab({
                     Edit roles
                   </button>
                 ) : null}
-                {member.id !== currentStaffId ? (
+                {isOwner && member.id !== currentStaffId ? (
                   <button
                     onClick={() => setTogglingActive(member)}
                     className="text-[13px] font-semibold text-ink-secondary"
@@ -335,6 +368,12 @@ function StaffTab({
         ))}
       </div>
 
+      {editingDetails ? (
+        <EditDetailsDialog
+          member={editingDetails}
+          onClose={() => setEditingDetails(null)}
+        />
+      ) : null}
       {editing ? (
         <EditRolesDialog member={editing} onClose={() => setEditing(null)} />
       ) : null}
@@ -444,6 +483,146 @@ function ReasonField({
         className="mt-1 w-full rounded-[var(--radius-control)] bg-surface-sunken px-3.5 py-3 text-[16px] text-ink outline-none placeholder:text-ink-secondary/60"
       />
     </label>
+  );
+}
+
+function TextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  inputMode,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  inputMode?: "text" | "tel";
+}) {
+  return (
+    <label className="block">
+      <span className="text-[12px] font-semibold uppercase tracking-[0.04em] text-ink-secondary">
+        {label}
+      </span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        inputMode={inputMode}
+        className="mt-1 w-full rounded-[var(--radius-control)] bg-surface-sunken px-3.5 py-3 text-[16px] text-ink outline-none placeholder:text-ink-secondary/60"
+      />
+    </label>
+  );
+}
+
+/**
+ * Full profile editing (§9.2). Doctor fields appear only for doctors, so one
+ * dialog serves the whole directory — the mutation ignores them for everyone
+ * else rather than erroring.
+ */
+function EditDetailsDialog({
+  member,
+  onClose,
+}: {
+  member: StaffRow;
+  onClose: () => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState(member.name);
+  const [phone, setPhone] = useState(member.phone);
+  const [qualification, setQualification] = useState(member.qualification ?? "");
+  const [specialty, setSpecialty] = useState(member.specialty ?? SPECIALTIES[0]);
+  const [registrationNo, setRegistrationNo] = useState(member.registrationNo ?? "");
+  const [registrationCouncil, setRegistrationCouncil] = useState(
+    member.registrationCouncil ?? "",
+  );
+  const [reason, setReason] = useState("");
+
+  const handleSave = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await updateStaffDetailsAction({
+        staffId: member.id,
+        reason,
+        edits: {
+          name,
+          phone,
+          qualification,
+          ...(member.isDoctor
+            ? { specialty, registrationNo, registrationCouncil }
+            : {}),
+        },
+      });
+      if (result.ok) onClose();
+      else setError(result.error);
+    });
+  };
+
+  return (
+    <DialogShell onClose={onClose}>
+      <DialogTitle className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">
+        {member.name}&apos;s details
+      </DialogTitle>
+      <p className="mt-1 text-[14px] text-ink-secondary">
+        {member.isDoctor
+          ? "Registration details print on every prescription — a doctor without them cannot prescribe."
+          : "Recorded with who changed it and why."}
+      </p>
+
+      {error ? (
+        <div className="mt-3">
+          <AlertBanner title={error} />
+        </div>
+      ) : null}
+
+      <div className="mt-4 flex flex-col gap-3">
+        <TextField label="Name" value={name} onChange={setName} />
+        <TextField label="Phone" value={phone} onChange={setPhone} inputMode="tel" />
+        <TextField
+          label="Qualification"
+          value={qualification}
+          onChange={setQualification}
+          placeholder="e.g. MBBS, MD (Paediatrics)"
+        />
+
+        {member.isDoctor ? (
+          <>
+            <SpecialtySelect value={specialty} onChange={setSpecialty} />
+            <TextField
+              label="Registration number"
+              value={registrationNo}
+              onChange={setRegistrationNo}
+              placeholder="e.g. KMC 78412"
+            />
+            <TextField
+              label="Registration council"
+              value={registrationCouncil}
+              onChange={setRegistrationCouncil}
+              placeholder="e.g. Karnataka Medical Council"
+            />
+          </>
+        ) : null}
+
+        <ReasonField
+          value={reason}
+          onChange={setReason}
+          placeholder="e.g. council registration verified from certificate"
+        />
+      </div>
+
+      <div className="mt-5 flex items-center gap-3">
+        <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
+        <div className="flex-1">
+          <PrimaryButton
+            disabled={reason.trim().length < 4 || isPending}
+            onClick={handleSave}
+          >
+            {isPending ? "Saving…" : "Save details"}
+          </PrimaryButton>
+        </div>
+      </div>
+    </DialogShell>
   );
 }
 
