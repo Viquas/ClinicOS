@@ -1,4 +1,5 @@
 import { getBookableDoctors } from "@/db/queries/queue";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { ReceptionDesk } from "./reception-desk";
 
@@ -10,11 +11,9 @@ import { ReceptionDesk } from "./reception-desk";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export default async function ReceptionPage() {
-  await requireRouteAccess(CLINIC_ID, "/reception");
-  const doctors = await getBookableDoctors(CLINIC_ID);
+  await requireRouteAccess(await getActiveClinicId(), "/reception");
+  const doctors = await getBookableDoctors(await getActiveClinicId());
   return <ReceptionDesk doctors={doctors} />;
 }

@@ -1,4 +1,5 @@
 import { getDashboard } from "@/db/queries/dashboard";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { getMessages } from "@/db/queries/messages";
 import { getDoctorFollowUpsToday } from "@/db/queries/home";
 import { getMrQueue } from "@/db/queries/mr";
@@ -16,8 +17,6 @@ import { HomeScreen } from "./home-screen";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic and date are fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 const MONTH_START = "2026-07-01";
 const MONTH_END = "2026-07-31";
@@ -28,7 +27,7 @@ export default async function HomePage({
   searchParams: Promise<{ denied?: string }>;
 }) {
   const { denied } = await searchParams;
-  const currentStaff = await getCurrentStaff(CLINIC_ID);
+  const currentStaff = await getCurrentStaff(await getActiveClinicId());
   const roles = currentStaff.roles;
 
   const needsQueue =
@@ -41,32 +40,32 @@ export default async function HomePage({
 
   const [queue, dashboard, messages, nursingTasks, vaccinationRoster, mrQueue, stock, doctors] =
     await Promise.all([
-      needsQueue ? getQueue(CLINIC_ID, TODAY) : Promise.resolve([]),
+      needsQueue ? getQueue(await getActiveClinicId(), TODAY) : Promise.resolve([]),
       needsDashboard
-        ? getDashboard(CLINIC_ID, MONTH_START, MONTH_END, TODAY)
+        ? getDashboard(await getActiveClinicId(), MONTH_START, MONTH_END, TODAY)
         : Promise.resolve(null),
       roles.includes("owner") || roles.includes("front_desk")
-        ? getMessages(CLINIC_ID)
+        ? getMessages(await getActiveClinicId())
         : Promise.resolve([]),
       roles.includes("owner") || roles.includes("nurse")
-        ? getNursingTasks(CLINIC_ID, TODAY)
+        ? getNursingTasks(await getActiveClinicId(), TODAY)
         : Promise.resolve([]),
       roles.includes("owner") || roles.includes("nurse")
-        ? getVaccinationRoster(CLINIC_ID, TODAY)
+        ? getVaccinationRoster(await getActiveClinicId(), TODAY)
         : Promise.resolve([]),
       roles.includes("owner") || roles.includes("doctor") || roles.includes("front_desk")
         ? getMrQueue(
-            CLINIC_ID,
+            await getActiveClinicId(),
             new Date(`${TODAY}T00:00:00+05:30`),
             new Date(`${TODAY}T23:59:59.999+05:30`),
           )
         : Promise.resolve([]),
-      needsDashboard ? getStock(CLINIC_ID) : Promise.resolve([]),
-      roles.includes("owner") ? getDoctors(CLINIC_ID) : Promise.resolve([]),
+      needsDashboard ? getStock(await getActiveClinicId()) : Promise.resolve([]),
+      roles.includes("owner") ? getDoctors(await getActiveClinicId()) : Promise.resolve([]),
     ]);
 
   const followUps = currentStaff.doctorId
-    ? await getDoctorFollowUpsToday(CLINIC_ID, currentStaff.doctorId, TODAY)
+    ? await getDoctorFollowUpsToday(await getActiveClinicId(), currentStaff.doctorId, TODAY)
     : [];
 
   const lowStock = stock.filter((item) => {

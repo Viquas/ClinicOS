@@ -6,9 +6,8 @@ import {
   type MergeResult,
 } from "@/db/mutations/merge-patients";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 /**
  * Thin wrapper: the merge itself lives in db/mutations so it can be tested
@@ -18,11 +17,11 @@ export async function mergePatients(
   survivorId: string,
   duplicateId: string,
 ): Promise<MergeResult> {
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "patient:merge");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "patient:merge");
   if (!auth.ok) return auth;
 
   const result = await mergePatientRecords({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     actorStaffId: auth.staff.id,
     survivorId,
     duplicateId,

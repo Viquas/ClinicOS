@@ -12,9 +12,8 @@ import {
   type UpdatePatientResult,
 } from "@/db/mutations/update-patient";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export async function updatePatientAction({
   patientId,
@@ -27,11 +26,11 @@ export async function updatePatientAction({
 }): Promise<UpdatePatientResult> {
   /* Demographics corrections are front-desk work (§7.1) — same permission
      as registering the patient in the first place. */
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "patient:register");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "patient:register");
   if (!auth.ok) return auth;
 
   const result = await updatePatientDemographics({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     patientId,
     actorStaffId: auth.staff.id,
     reason,
@@ -58,11 +57,11 @@ export async function amendConsultationAction({
 }): Promise<AmendConsultationResult> {
   /* Amending is consultation-writing; the mutation additionally restricts
      it to the authoring doctor or the owner. */
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "consultation:write");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "consultation:write");
   if (!auth.ok) return auth;
 
   const result = await amendConsultation({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     visitId,
     actorStaffId: auth.staff.id,
     actorRoles: auth.staff.roles,

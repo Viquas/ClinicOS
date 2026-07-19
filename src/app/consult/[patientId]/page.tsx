@@ -1,4 +1,5 @@
 import { getConsultContext } from "@/db/queries/consult";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { getStock } from "@/db/queries/pharmacy";
 import { resolveSpecialtyPack } from "@/lib/clinical/specialties";
 import { notFound, redirect } from "next/navigation";
@@ -11,8 +12,6 @@ import { ConsultForm } from "./consult-form";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export default async function ConsultPage({
   params,
@@ -26,8 +25,8 @@ export default async function ConsultPage({
   if (!visitId) notFound();
 
   const [ctx, stock] = await Promise.all([
-    getConsultContext(CLINIC_ID, visitId),
-    getStock(CLINIC_ID),
+    getConsultContext(await getActiveClinicId(), visitId),
+    getStock(await getActiveClinicId()),
   ]);
   if (!ctx || ctx.patient.id !== patientId) notFound();
 

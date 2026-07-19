@@ -77,15 +77,27 @@ const NAV: {
 export function AppNav({
   roles = ["owner", "doctor", "front_desk", "nurse", "pharmacy"],
   staffName,
+  clinicName = "ClinicOS",
+  clinicInitials = "CL",
+  hiddenRoutes = [],
 }: {
   roles?: StaffRole[];
   staffName?: string;
+  clinicName?: string;
+  clinicInitials?: string;
+  /* Routes the clinic's specialty pack switches off (§6) — Vaccines has no
+     meaning in a dermatology clinic, and a nav item that leads to an empty
+     module reads as a broken feature rather than an unused one. */
+  hiddenRoutes?: string[];
 } = {}) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const isActive = (href: string) => pathname.startsWith(href);
-  const visible = NAV.filter((item) => roleCanVisit(roles, item.href));
+  const visible = NAV.filter(
+    (item) =>
+      roleCanVisit(roles, item.href) && !hiddenRoutes.includes(item.href),
+  );
   const primary = visible.filter((t) => t.primary);
   const overflow = visible.filter((t) => !t.primary);
 
@@ -109,14 +121,14 @@ export function AppNav({
             aria-hidden
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[13px] font-bold text-accent"
           >
-            VC
+            {clinicInitials}
           </span>
           <span className="min-w-0">
             <span className="block truncate text-[15px] font-bold leading-tight text-ink">
               ClinicOS
             </span>
             <span className="block truncate text-[12px] leading-tight text-ink-secondary">
-              Vatsalya Child Care
+              {clinicName}
             </span>
           </span>
         </Link>

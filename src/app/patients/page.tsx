@@ -1,4 +1,5 @@
 import { listPatients } from "@/db/queries/patients";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { PatientsBoard } from "./patients-board";
 
@@ -10,11 +11,9 @@ import { PatientsBoard } from "./patients-board";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export default async function PatientsPage() {
-  await requireRouteAccess(CLINIC_ID, "/patients");
-  const patients = await listPatients(CLINIC_ID);
+  await requireRouteAccess(await getActiveClinicId(), "/patients");
+  const patients = await listPatients(await getActiveClinicId());
   return <PatientsBoard patients={patients} />;
 }

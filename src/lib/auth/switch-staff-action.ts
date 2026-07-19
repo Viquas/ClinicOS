@@ -4,10 +4,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { resolveStaffIdentity } from "@/db/queries/staff";
 import { CURRENT_STAFF_COOKIE } from "./current-staff";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
 /* Until real auth is wired, the clinic is fixed to the seeded scenario —
-   matches every page.tsx's CLINIC_ID constant. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
+   matches every page.tsx's await getActiveClinicId() constant. */
 
 /**
  * Called once a staff member's PIN is accepted on the device (§7.12). Sets
@@ -19,7 +19,7 @@ const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
  * confirms the id names a real, active staff member before setting anything.
  */
 export async function switchStaffAction(staffId: string) {
-  const identity = await resolveStaffIdentity(CLINIC_ID, staffId);
+  const identity = await resolveStaffIdentity(await getActiveClinicId(), staffId);
   if (!identity) {
     return { ok: false as const, error: "That staff member is not active" };
   }

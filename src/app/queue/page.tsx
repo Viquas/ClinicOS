@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getDoctors, getQueue } from "@/db/queries/queue";
@@ -21,16 +22,13 @@ export const dynamic = "force-dynamic";
  * the queue in it — which matters on a clinic tablet on tier-3 connectivity.
  */
 
-/* Until auth is wired, the clinic and date are fixed to the seeded scenario.
-   Both become session-derived once the JWT claims are in play. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export default async function QueuePage() {
-  await requireRouteAccess(CLINIC_ID, "/queue");
+  await requireRouteAccess(await getActiveClinicId(), "/queue");
   const [queue, doctors] = await Promise.all([
-    getQueue(CLINIC_ID, TODAY),
-    getDoctors(CLINIC_ID),
+    getQueue(await getActiveClinicId(), TODAY),
+    getDoctors(await getActiveClinicId()),
   ]);
 
   if (doctors.length === 0) {

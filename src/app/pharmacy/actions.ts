@@ -3,9 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { dispense, type DispenseResult } from "@/db/mutations/dispense";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export async function dispenseAction(input: {
   visitId: string;
@@ -13,11 +12,11 @@ export async function dispenseAction(input: {
   patient: { id: string; name: string };
   doctor: { name: string; registrationNo: string | null };
 }): Promise<DispenseResult> {
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "prescription:dispense");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "prescription:dispense");
   if (!auth.ok) return auth;
 
   const result = await dispense({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     visitId: input.visitId,
     lines: input.lines,
     actorStaffId: auth.staff.id,

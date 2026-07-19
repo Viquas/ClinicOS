@@ -1,4 +1,5 @@
 import { getMessages } from "@/db/queries/messages";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { MessagesBoard } from "./messages-board";
 
@@ -9,12 +10,10 @@ import { MessagesBoard } from "./messages-board";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export default async function MessagesPage() {
-  await requireRouteAccess(CLINIC_ID, "/messages");
-  const messages = await getMessages(CLINIC_ID);
+  await requireRouteAccess(await getActiveClinicId(), "/messages");
+  const messages = await getMessages(await getActiveClinicId());
 
   return (
     <MessagesBoard

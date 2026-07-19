@@ -11,17 +11,28 @@ import { AppNav } from "./app-nav";
  * The waiting-room display runs unattended on a TV with no input device, so
  * navigation would be both useless and a privacy risk — anyone walking past
  * could tab into patient data.
+ *
+ * Onboarding is bare for a different reason: it builds a clinic that does not
+ * exist yet, so framing it in the current clinic's nav offers escape hatches
+ * into someone else's data and implies the wizard is a screen within that
+ * clinic rather than the thing that creates a new one.
  */
-const BARE_ROUTES = ["/display", "/login"];
+const BARE_ROUTES = ["/display", "/login", "/onboarding"];
 
 export function AppChrome({
   children,
   staffName,
   staffRoles,
+  clinicName,
+  clinicInitials,
+  hiddenRoutes,
 }: {
   children: ReactNode;
   staffName: string;
   staffRoles: StaffRole[];
+  clinicName: string;
+  clinicInitials: string;
+  hiddenRoutes: string[];
 }) {
   const pathname = usePathname();
 
@@ -37,7 +48,13 @@ export function AppChrome({
           {children}
         </div>
       </div>
-      <AppNav roles={staffRoles} staffName={staffName} />
+      <AppNav
+        roles={staffRoles}
+        staffName={staffName}
+        clinicName={clinicName}
+        clinicInitials={clinicInitials}
+        hiddenRoutes={hiddenRoutes}
+      />
     </>
   );
 }

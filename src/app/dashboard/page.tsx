@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { GroupedList, Row, SectionLabel } from "@/components/ui/card";
@@ -17,8 +18,6 @@ import { IndianRupee, Package, Stethoscope, Users } from "lucide-react";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic and window are fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const MONTH_START = "2026-07-01";
 const MONTH_END = "2026-07-31";
 const TODAY = "2026-07-18";
@@ -41,8 +40,8 @@ function money(paise: number): { value: string; unit?: string } {
 }
 
 export default async function DashboardPage() {
-  await requireRouteAccess(CLINIC_ID, "/dashboard");
-  const data = await getDashboard(CLINIC_ID, MONTH_START, MONTH_END, TODAY);
+  await requireRouteAccess(await getActiveClinicId(), "/dashboard");
+  const data = await getDashboard(await getActiveClinicId(), MONTH_START, MONTH_END, TODAY);
 
   const alertCount = data.expiringAlerts.length + data.lowStock.length;
   const consultShare =

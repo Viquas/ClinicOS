@@ -1,4 +1,5 @@
 import { getVitalsCaptureContext } from "@/db/queries/vitals-capture";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { resolveSpecialtyPack } from "@/lib/clinical/specialties";
 import { notFound, redirect } from "next/navigation";
 import { VitalsForm } from "./vitals-form";
@@ -10,8 +11,6 @@ import { VitalsForm } from "./vitals-form";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export default async function VitalsPage({
   params,
@@ -24,7 +23,7 @@ export default async function VitalsPage({
   const { visitId } = await searchParams;
   if (!visitId) notFound();
 
-  const ctx = await getVitalsCaptureContext(CLINIC_ID, visitId);
+  const ctx = await getVitalsCaptureContext(await getActiveClinicId(), visitId);
   if (!ctx || ctx.patient.id !== patientId) notFound();
 
   /* Vitals belong to the waiting step only — a token already past it (or one

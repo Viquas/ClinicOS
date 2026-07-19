@@ -1,4 +1,5 @@
 import { getFamily, getPatient, getPatientTimeline } from "@/db/queries/patients";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { getPatientFiles } from "@/db/queries/patient-files";
 import { getRecordRevisions } from "@/db/queries/revisions";
 import { getCurrentStaff } from "@/lib/auth/current-staff";
@@ -12,8 +13,6 @@ import { PatientRecord } from "./patient-record";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export default async function PatientRecordPage({
   params,
@@ -22,14 +21,14 @@ export default async function PatientRecordPage({
 }) {
   const { patientId } = await params;
 
-  const patient = await getPatient(CLINIC_ID, patientId);
+  const patient = await getPatient(await getActiveClinicId(), patientId);
   if (!patient) notFound();
 
   const [timeline, files, currentStaff, family] = await Promise.all([
-    getPatientTimeline(CLINIC_ID, patientId),
-    getPatientFiles(CLINIC_ID, patientId),
-    getCurrentStaff(CLINIC_ID),
-    getFamily(CLINIC_ID, patient.phone),
+    getPatientTimeline(await getActiveClinicId(), patientId),
+    getPatientFiles(await getActiveClinicId(), patientId),
+    getCurrentStaff(await getActiveClinicId()),
+    getFamily(await getActiveClinicId(), patient.phone),
   ]);
 
   /* One phone number holds several people — the parent's phone with the
@@ -49,7 +48,7 @@ export default async function PatientRecordPage({
         .filter((entry) => entry.amended)
         .map(async (entry) => [
           entry.visitId,
-          await getRecordRevisions(CLINIC_ID, "consultations", entry.visitId),
+          await getRecordRevisions(await getActiveClinicId(), "consultations", entry.visitId),
         ]),
     ),
   );

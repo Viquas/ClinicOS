@@ -8,11 +8,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/primary-button";
 import { StatusPill } from "@/components/ui/status";
+import type { ClinicProfile } from "@/db/queries/clinic";
 import type { StaffRow } from "@/db/queries/staff";
 import { describeAudit } from "@/lib/audit/describe";
 import type { StaffRole } from "@/lib/auth/claims";
 import { SPECIALTY_REGISTRY } from "@/lib/clinical/specialties";
-import { clinic } from "@/lib/mock/data";
 import {
   getServerTheme,
   getStoredTheme,
@@ -42,8 +42,8 @@ type LastChange = { byName: string | null; at: string; reason: string } | null;
 /**
  * Settings (§7.8, §7.12).
  *
- * Clinic profile and Night OPD stay as static/local concerns; staff and the
- * audit trail now read from the database. The audit tab is the one that earns
+ * Night OPD stays a device-local concern; the clinic profile, staff and the
+ * audit trail all read from the database. The audit tab is the one that earns
  * its place — it shows the real, append-only record of everything that has
  * happened, which is exactly what §7.8 requires and what an inspector asks for.
  */
@@ -51,22 +51,25 @@ export function SettingsScreen({
   staff,
   currentStaffId,
   currentStaffRoles,
+  clinic,
   lastChangeByStaffId,
   audit,
 }: {
   staff: StaffRow[];
   currentStaffId: string;
   currentStaffRoles: StaffRole[];
+  clinic: ClinicProfile | null;
   lastChangeByStaffId: Record<string, LastChange>;
   audit: AuditEntry[];
 }) {
   return (
     <>
-      <ScreenHeader title="Settings" subtitle={clinic.name} />
+      <ScreenHeader title="Settings" subtitle={clinic?.name ?? "ClinicOS"} />
       <Tabs
         staff={staff}
         currentStaffId={currentStaffId}
         currentStaffRoles={currentStaffRoles}
+        clinic={clinic}
         lastChangeByStaffId={lastChangeByStaffId}
         audit={audit}
       />
@@ -80,12 +83,14 @@ function Tabs({
   staff,
   currentStaffId,
   currentStaffRoles,
+  clinic,
   lastChangeByStaffId,
   audit,
 }: {
   staff: StaffRow[];
   currentStaffId: string;
   currentStaffRoles: StaffRole[];
+  clinic: ClinicProfile | null;
   lastChangeByStaffId: Record<string, LastChange>;
   audit: AuditEntry[];
 }) {
@@ -127,7 +132,7 @@ function Tabs({
         ]}
       />
 
-      {tab === "clinic" ? <ClinicTab /> : null}
+      {tab === "clinic" ? <ClinicTab clinic={clinic} /> : null}
       {tab === "staff" ? (
         <StaffTab
           staff={staff}
@@ -172,7 +177,7 @@ function ThemeControl() {
   );
 }
 
-function ClinicTab() {
+function ClinicTab({ clinic }: { clinic: ClinicProfile | null }) {
   return (
     <div className="flex flex-col gap-4">
       <Card className="p-5">
@@ -183,16 +188,27 @@ function ClinicTab() {
           Prints on every prescription and bill.
         </p>
         <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
-          <Detail label="Name" value={clinic.name} />
+          <Detail label="Name" value={clinic?.name ?? "—"} />
           <Detail
             label="Address"
-            value={`${clinic.addressLine}, ${clinic.city}`}
+            value={
+              [clinic?.addressLine, clinic?.city, clinic?.pincode]
+                .filter(Boolean)
+                .join(", ") || "—"
+            }
           />
           <Detail
             label="Clinical Establishments Act reg."
-            value={clinic.ceaRegistrationNo}
+            value={clinic?.ceaRegistrationNo ?? "Not recorded"}
           />
-          <Detail label="GST status" value="Registered · 29ABCDE1234F1Z5" />
+          <Detail
+            label="GST status"
+            value={
+              clinic?.isGstRegistered
+                ? `Registered · ${clinic.gstin ?? "—"}`
+                : "Not registered"
+            }
+          />
         </dl>
       </Card>
 

@@ -1,4 +1,5 @@
 import { getNursingTasks } from "@/db/queries/tasks";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { TasksBoard } from "./tasks-board";
 
@@ -9,13 +10,11 @@ import { TasksBoard } from "./tasks-board";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic and date are fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export default async function TasksPage() {
-  await requireRouteAccess(CLINIC_ID, "/tasks");
-  const tasks = await getNursingTasks(CLINIC_ID, TODAY);
+  await requireRouteAccess(await getActiveClinicId(), "/tasks");
+  const tasks = await getNursingTasks(await getActiveClinicId(), TODAY);
 
   return (
     <TasksBoard

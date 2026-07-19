@@ -1,4 +1,5 @@
 import { getVaccinationRoster } from "@/db/queries/vaccinations";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { VaccinationsBoard } from "./vaccinations-board";
 
@@ -9,12 +10,10 @@ import { VaccinationsBoard } from "./vaccinations-board";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic and date are fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export default async function VaccinationsPage() {
-  await requireRouteAccess(CLINIC_ID, "/vaccinations");
-  const roster = await getVaccinationRoster(CLINIC_ID, TODAY);
+  await requireRouteAccess(await getActiveClinicId(), "/vaccinations");
+  const roster = await getVaccinationRoster(await getActiveClinicId(), TODAY);
   return <VaccinationsBoard roster={roster} />;
 }

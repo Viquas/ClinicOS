@@ -1,4 +1,5 @@
 import { getDoctors, getQueue } from "@/db/queries/queue";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { DisplayBoard } from "./display-board";
 
 /*
@@ -9,14 +10,12 @@ import { DisplayBoard } from "./display-board";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic and date are fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export default async function DisplayPage() {
   const [queue, doctors] = await Promise.all([
-    getQueue(CLINIC_ID, TODAY),
-    getDoctors(CLINIC_ID),
+    getQueue(await getActiveClinicId(), TODAY),
+    getDoctors(await getActiveClinicId()),
   ]);
 
   return <DisplayBoard queue={queue} doctors={doctors} />;

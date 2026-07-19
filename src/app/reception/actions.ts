@@ -9,13 +9,12 @@ import {
 } from "@/db/mutations/issue-token";
 import { searchPatients } from "@/db/queries/patients";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export async function searchAction(query: string) {
-  return searchPatients(CLINIC_ID, query);
+  return searchPatients(await getActiveClinicId(), query);
 }
 
 export async function issueTokenAction(
@@ -23,11 +22,11 @@ export async function issueTokenAction(
   doctorId: string,
   isPriority = false,
 ): Promise<IssueResult> {
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "patient:register");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "patient:register");
   if (!auth.ok) return auth;
 
   const result = await issueToken({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     patientId,
     doctorId,
     onDate: TODAY,
@@ -52,11 +51,11 @@ export async function registerPatientAction(input: {
   ageYears?: number | null;
   guardianName?: string | null;
 }): Promise<RegisterResult> {
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "patient:register");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "patient:register");
   if (!auth.ok) return auth;
 
   const result = await registerPatient({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     actorStaffId: auth.staff.id,
     ...input,
   });

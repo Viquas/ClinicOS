@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getBillableVisit } from "@/db/queries/billable";
@@ -13,13 +14,11 @@ import { BillingScreen } from "./billing-screen";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic and date are fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export default async function BillingPage() {
-  await requireRouteAccess(CLINIC_ID, "/billing");
-  const billable = await getBillableVisit(CLINIC_ID, TODAY);
+  await requireRouteAccess(await getActiveClinicId(), "/billing");
+  const billable = await getBillableVisit(await getActiveClinicId(), TODAY);
 
   if (!billable) {
     return (
@@ -33,7 +32,7 @@ export default async function BillingPage() {
     );
   }
 
-  const draft = await getBillDraft(CLINIC_ID, billable.visitId);
+  const draft = await getBillDraft(await getActiveClinicId(), billable.visitId);
   if (!draft) {
     return (
       <>

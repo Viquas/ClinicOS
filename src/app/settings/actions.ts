@@ -16,9 +16,8 @@ import {
 import { getCurrentStaff } from "@/lib/auth/current-staff";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
 import type { StaffRole } from "@/lib/auth/claims";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export async function updateStaffRolesAction(input: {
   staffId: string;
@@ -26,11 +25,11 @@ export async function updateStaffRolesAction(input: {
   reason: string;
   specialty?: string;
 }): Promise<ManageStaffResult> {
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "staff:manage");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "staff:manage");
   if (!auth.ok) return auth;
 
   const result = await updateStaffRoles({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     actorStaffId: auth.staff.id,
     actorRoles: auth.staff.roles,
     ...input,
@@ -50,11 +49,11 @@ export async function addStaffAction(input: {
   qualification?: string | null;
   specialty?: string;
 }): Promise<AddStaffResult> {
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "staff:manage");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "staff:manage");
   if (!auth.ok) return auth;
 
   const result = await addStaff({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     actorStaffId: auth.staff.id,
     actorRoles: auth.staff.roles,
     ...input,
@@ -75,10 +74,10 @@ export async function updateStaffDetailsAction(input: {
   reason: string;
   edits: StaffDetailEdits;
 }): Promise<UpdateStaffDetailsResult> {
-  const currentStaff = await getCurrentStaff(CLINIC_ID);
+  const currentStaff = await getCurrentStaff(await getActiveClinicId());
 
   const result = await updateStaffDetails({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     actorStaffId: currentStaff.id,
     actorRoles: currentStaff.roles,
     ...input,
@@ -96,11 +95,11 @@ export async function setStaffActiveAction(input: {
   active: boolean;
   reason: string;
 }): Promise<ManageStaffResult> {
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "staff:manage");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "staff:manage");
   if (!auth.ok) return auth;
 
   const result = await setStaffActive({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     actorStaffId: auth.staff.id,
     actorRoles: auth.staff.roles,
     ...input,

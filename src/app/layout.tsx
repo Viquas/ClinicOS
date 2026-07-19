@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { getClinicProfile } from "@/db/queries/clinic";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { AppChrome } from "@/components/app-chrome";
 import { getCurrentStaff } from "@/lib/auth/current-staff";
+import { resolveSpecialtyPack } from "@/lib/clinical/specialties";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export const metadata: Metadata = {
   title: "ClinicOS",
@@ -28,7 +29,18 @@ export const viewport: Viewport = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const currentStaff = await getCurrentStaff(CLINIC_ID);
+  const clinicId = await getActiveClinicId();
+  const [currentStaff, clinic] = await Promise.all([
+    getCurrentStaff(clinicId),
+    getClinicProfile(clinicId),
+  ]);
+
+  /* Module visibility follows the clinic's specialty (§6): a dermatology
+     clinic has no vaccination schedule, so the nav must not offer one. */
+  const pack = resolveSpecialtyPack(clinic?.primarySpecialty, {});
+  const hiddenRoutes = [
+    ...(pack.modules.vaccinations ? [] : ["/vaccinations"]),
+  ];
 
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
@@ -55,7 +67,13 @@ export default async function RootLayout({
         className="flex min-h-full flex-col bg-canvas"
         suppressHydrationWarning
       >
-        <AppChrome staffName={currentStaff.name} staffRoles={currentStaff.roles}>
+        <AppChrome
+          staffName={currentStaff.name}
+          staffRoles={currentStaff.roles}
+          clinicName={clinic?.name ?? "ClinicOS"}
+          clinicInitials={clinic?.initials ?? "CL"}
+          hiddenRoutes={hiddenRoutes}
+        >
           {children}
         </AppChrome>
       </body>

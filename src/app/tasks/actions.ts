@@ -3,16 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { completeTask, startTask } from "@/db/mutations/procedure-task";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export async function startTaskAction(taskId: string) {
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "procedure:execute");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "procedure:execute");
   if (!auth.ok) return auth;
 
   const result = await startTask({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     taskId,
     actorStaffId: auth.staff.id,
   });
@@ -21,11 +20,11 @@ export async function startTaskAction(taskId: string) {
 }
 
 export async function completeTaskAction(taskId: string) {
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "procedure:execute");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "procedure:execute");
   if (!auth.ok) return auth;
 
   const result = await completeTask({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     taskId,
     actorStaffId: auth.staff.id,
     asOf: new Date(),

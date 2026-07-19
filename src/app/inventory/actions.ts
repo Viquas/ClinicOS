@@ -3,9 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { addPurchase, type AddPurchaseResult } from "@/db/mutations/add-purchase";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export async function addPurchaseAction(input: {
@@ -17,11 +16,11 @@ export async function addPurchaseAction(input: {
   supplierName?: string | null;
   invoiceNo?: string | null;
 }): Promise<AddPurchaseResult> {
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "inventory:purchase");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "inventory:purchase");
   if (!auth.ok) return auth;
 
   const result = await addPurchase({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     actorStaffId: auth.staff.id,
     today: TODAY,
     ...input,

@@ -7,25 +7,24 @@ import {
   markRepSeen,
 } from "@/db/mutations/mr-visit";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export async function checkInRepAction(mrVisitId: string) {
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "mr:manage");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "mr:manage");
   if (!auth.ok) return auth;
 
-  const result = await checkInRep({ clinicId: CLINIC_ID, mrVisitId });
+  const result = await checkInRep({ clinicId: await getActiveClinicId(), mrVisitId });
   if (result.ok) revalidatePath("/mr");
   return result;
 }
 
 export async function markRepSeenAction(mrVisitId: string, doctorNotes?: string) {
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "mr:manage");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "mr:manage");
   if (!auth.ok) return auth;
 
   const result = await markRepSeen({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     mrVisitId,
     actorStaffId: auth.staff.id,
     doctorNotes,
@@ -35,11 +34,11 @@ export async function markRepSeenAction(mrVisitId: string, doctorNotes?: string)
 }
 
 export async function logWalkInRepAction(repId: string, doctorId: string) {
-  const auth = await requireCurrentStaffCan(CLINIC_ID, "mr:manage");
+  const auth = await requireCurrentStaffCan(await getActiveClinicId(), "mr:manage");
   if (!auth.ok) return auth;
 
   const result = await logWalkInRep({
-    clinicId: CLINIC_ID,
+    clinicId: await getActiveClinicId(),
     repId,
     doctorId,
     actorStaffId: auth.staff.id,

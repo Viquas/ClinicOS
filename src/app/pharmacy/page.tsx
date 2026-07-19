@@ -1,4 +1,5 @@
 import { ScreenHeader } from "@/components/screen-header";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getDispensingContext } from "@/db/queries/dispensing";
@@ -12,13 +13,11 @@ import { PharmacyCounter } from "./pharmacy-counter";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic and date are fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 const TODAY = "2026-07-18";
 
 export default async function PharmacyPage() {
-  await requireRouteAccess(CLINIC_ID, "/pharmacy");
-  const context = await getDispensingContext(CLINIC_ID, TODAY);
+  await requireRouteAccess(await getActiveClinicId(), "/pharmacy");
+  const context = await getDispensingContext(await getActiveClinicId(), TODAY);
 
   if (!context) {
     return (

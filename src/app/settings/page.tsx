@@ -1,4 +1,6 @@
+import { getClinicProfile } from "@/db/queries/clinic";
 import { getRecordRevisions } from "@/db/queries/revisions";
+import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { getAuditLog, getStaff } from "@/db/queries/staff";
 import { getCurrentStaff } from "@/lib/auth/current-staff";
 import { SettingsScreen } from "./settings-screen";
@@ -11,14 +13,14 @@ import { SettingsScreen } from "./settings-screen";
  */
 export const dynamic = "force-dynamic";
 
-/* Until auth is wired, the clinic is fixed to the seeded scenario. */
-const CLINIC_ID = "11111111-1111-1111-1111-111111111111";
 
 export default async function SettingsPage() {
-  const [staff, audit, currentStaff] = await Promise.all([
-    getStaff(CLINIC_ID),
-    getAuditLog(CLINIC_ID),
-    getCurrentStaff(CLINIC_ID),
+  const clinicId = await getActiveClinicId();
+  const [staff, audit, currentStaff, clinic] = await Promise.all([
+    getStaff(clinicId),
+    getAuditLog(clinicId),
+    getCurrentStaff(clinicId),
+    getClinicProfile(clinicId),
   ]);
 
   /* Latest role/active change per member (P1 §7.8 polish) — the staff list
@@ -26,7 +28,7 @@ export default async function SettingsPage() {
   const lastChangeByStaffId = Object.fromEntries(
     await Promise.all(
       staff.map(async (member) => {
-        const [latest] = await getRecordRevisions(CLINIC_ID, "staff", member.id);
+        const [latest] = await getRecordRevisions(clinicId, "staff", member.id);
         return [
           member.id,
           latest
@@ -46,6 +48,7 @@ export default async function SettingsPage() {
       staff={staff}
       currentStaffId={currentStaff.id}
       currentStaffRoles={currentStaff.roles}
+      clinic={clinic}
       lastChangeByStaffId={lastChangeByStaffId}
       audit={audit.map((a) => ({
         id: a.id,
