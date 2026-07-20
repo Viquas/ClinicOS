@@ -1,4 +1,5 @@
 import { getVaccinationRoster } from "@/db/queries/vaccinations";
+import { getBookableDoctors } from "@/db/queries/queue";
 import { clinicToday } from "@/lib/clinic-date";
 import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
@@ -17,8 +18,17 @@ export default async function VaccinationsPage() {
   const TODAY = clinicToday();
   const clinicId = await getActiveClinicId();
   await requireRouteAccess(clinicId, "/vaccinations");
-  const roster = await tenantDb((tx) =>
-    getVaccinationRoster(clinicId, TODAY, tx),
+  const [roster, doctors] = await tenantDb((tx) =>
+    Promise.all([
+      getVaccinationRoster(clinicId, TODAY, tx),
+      /* Only doctors who can still be booked supervise a new dose. */
+      getBookableDoctors(clinicId, tx),
+    ]),
   );
-  return <VaccinationsBoard roster={roster} />;
+  return (
+    <VaccinationsBoard
+      roster={roster}
+      doctors={doctors.map((d) => ({ id: d.id, name: d.name }))}
+    />
+  );
 }

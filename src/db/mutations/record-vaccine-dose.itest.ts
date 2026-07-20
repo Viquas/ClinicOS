@@ -10,6 +10,7 @@ const CLINIC = "11111111-1111-1111-1111-111111111111";
 const STAFF = "22222222-0000-0000-0000-000000000003";
 const DOCTOR = "33333333-0000-0000-0000-000000000001";
 const AARAV = "44444444-0000-0000-0000-000000000001";
+const DR_ANAND = "33333333-0000-0000-0000-000000000002";
 
 const createdVisitIds: string[] = [];
 
@@ -119,5 +120,35 @@ describe("recordVaccineDose", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/not set up/i);
+  });
+});
+
+describe("the supervising doctor", () => {
+  it("records the dose against the doctor it was given, not a hardcoded one", async () => {
+    /* This used to always name Dr Sameera, which is merely wrong rather than
+       obviously wrong in a clinic with two doctors. */
+    const result = await recordVaccineDose({
+      clinicId: CLINIC,
+      patientId: AARAV,
+      doseId: "typhoid",
+      doctorId: DR_ANAND,
+      actorStaffId: STAFF,
+      givenOn: clinicToday(),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    /* The dose creates its own visit; find it via the task it produced. */
+    const [task] = await db
+      .select({ visitId: procedureTasks.visitId })
+      .from(procedureTasks)
+      .where(eq(procedureTasks.id, result.taskId));
+    createdVisitIds.push(task.visitId);
+
+    const [visit] = await db
+      .select({ doctorId: visits.doctorId })
+      .from(visits)
+      .where(eq(visits.id, task.visitId));
+    expect(visit.doctorId).toBe(DR_ANAND);
   });
 });

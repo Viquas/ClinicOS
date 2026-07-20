@@ -28,10 +28,17 @@ import { recordDoseAction } from "./actions";
  */
 export function VaccinationsBoard({
   roster,
+  doctors,
 }: {
   roster: ChildVaccinationRow[];
+  doctors: { id: string; name: string }[];
 }) {
   const [view, setView] = useState<"due" | "child">("due");
+  /* A dose is nurse-given but doctor-supervised, and the record names which
+     doctor — so the nurse picks before recording rather than the app
+     guessing. Defaults to the first, which is right in a single-doctor
+     clinic and visible in any other. */
+  const [doctorId, setDoctorId] = useState(doctors[0]?.id ?? "");
   const [childId, setChildId] = useState(roster[0]?.patientId ?? "");
   const [reminded, setReminded] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +54,7 @@ export function VaccinationsBoard({
   const handleRecord = (patientId: string, doseId: string) => {
     setError(null);
     startTransition(async () => {
-      const result = await recordDoseAction(patientId, doseId);
+      const result = await recordDoseAction(patientId, doseId, doctorId);
       if (result.ok) {
         setRecorded((prev) => new Set(prev).add(`${patientId}:${doseId}`));
       } else {
@@ -79,6 +86,30 @@ export function VaccinationsBoard({
         <div className="mb-4">
           <AlertBanner title={error} />
         </div>
+      ) : null}
+
+      {/* Only a real choice is worth a control: a single-doctor clinic has
+          nothing to pick, and the dose still records against them. */}
+      {doctors.length > 1 ? (
+        <label className="mb-5 block">
+          <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-ink-secondary">
+            Supervising doctor
+          </span>
+          <select
+            value={doctorId}
+            onChange={(e) => setDoctorId(e.target.value)}
+            className={cn(
+              "mt-1 min-h-[var(--touch-min)] w-full max-w-sm rounded-[var(--radius-control)] bg-surface-sunken px-3.5",
+              "text-[16px] text-ink outline-none",
+            )}
+          >
+            {doctors.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </label>
       ) : null}
 
       <SegmentedControl
