@@ -28,12 +28,15 @@ export async function completeTaskAction(taskId: string) {
   const auth = await requireCurrentStaffCan(clinicId, "procedure:execute");
   if (!auth.ok) return auth;
 
-  const result = await completeTask({
-    clinicId: await getActiveClinicId(),
-    taskId,
-    actorStaffId: auth.staff.id,
-    asOf: new Date(),
-  });
+  const result = await tenantDb((tx) =>
+    completeTask({
+      clinicId,
+      taskId,
+      actorStaffId: auth.staff.id,
+      asOf: new Date(),
+      executor: tx,
+    }),
+  );
   if (result.ok) {
     revalidatePath("/tasks");
     revalidatePath("/inventory");

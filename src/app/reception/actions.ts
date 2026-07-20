@@ -32,14 +32,17 @@ export async function issueTokenAction(
   const auth = await requireCurrentStaffCan(clinicId, "patient:register");
   if (!auth.ok) return auth;
 
-  const result = await issueToken({
-    clinicId: await getActiveClinicId(),
-    patientId,
-    doctorId,
-    onDate: TODAY,
-    isPriority,
-    actorStaffId: auth.staff.id,
-  });
+  const result = await tenantDb((tx) =>
+    issueToken({
+      clinicId,
+      patientId,
+      doctorId,
+      onDate: TODAY,
+      isPriority,
+      actorStaffId: auth.staff.id,
+      executor: tx,
+    }),
+  );
 
   if (result.ok) {
     /* The queue is the screen that must reflect this immediately. */
@@ -62,11 +65,14 @@ export async function registerPatientAction(input: {
   const auth = await requireCurrentStaffCan(clinicId, "patient:register");
   if (!auth.ok) return auth;
 
-  const result = await registerPatient({
-    clinicId: await getActiveClinicId(),
-    actorStaffId: auth.staff.id,
-    ...input,
-  });
+  const result = await tenantDb((tx) =>
+    registerPatient({
+      clinicId,
+      actorStaffId: auth.staff.id,
+      ...input,
+      executor: tx,
+    }),
+  );
 
   if (result.ok) {
     revalidatePath("/patients");

@@ -9,6 +9,8 @@ import { StatusPill } from "@/components/ui/status";
 import { cn } from "@/lib/utils";
 import { useState, useTransition } from "react";
 import {
+  addRepAction,
+  archiveRepAction,
   checkInRepAction,
   logWalkInRepAction,
   markRepSeenAction,
@@ -254,7 +256,167 @@ export function MrBoard({
           </Card>
         </>
       ) : null}
+
+      <RepDirectory directory={directory} />
     </>
+  );
+}
+
+/**
+ * The rep formulary (§7.9).
+ *
+ * Reps used to exist only in the seed, so a clinic meeting a new one had
+ * nowhere to record them — the queue could log a walk-in, but only for
+ * somebody already in the list. The company is typed rather than picked
+ * because the front desk is looking at a business card, not a dropdown; the
+ * mutation matches it case-insensitively against existing companies.
+ */
+function RepDirectory({ directory }: { directory: DirectoryRep[] }) {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [division, setDivision] = useState("");
+
+  const reset = () => {
+    setName("");
+    setCompanyName("");
+    setPhone("");
+    setDivision("");
+    setAdding(false);
+  };
+
+  const handleAdd = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await addRepAction({ name, companyName, phone, division });
+      if (result.ok) reset();
+      else setError(result.error);
+    });
+  };
+
+  const handleArchive = (repId: string, repName: string) => {
+    setError(null);
+    startTransition(async () => {
+      const result = await archiveRepAction(repId);
+      if (!result.ok) setError(`${repName}: ${result.error}`);
+    });
+  };
+
+  return (
+    <>
+      <SectionLabel>Rep directory</SectionLabel>
+      <Card className="mb-6 p-5">
+        {error ? (
+          <div className="mb-4">
+            <AlertBanner title={error} />
+          </div>
+        ) : null}
+
+        {directory.length === 0 ? (
+          <p className="mb-4 text-[14px] text-ink-secondary">
+            No reps on file yet. Add the first one below.
+          </p>
+        ) : (
+          <ul className="mb-4 flex flex-col gap-2">
+            {directory.map((rep) => (
+              <li
+                key={rep.id}
+                className="flex items-center gap-3 rounded-[var(--radius-control)] bg-surface-sunken px-3.5 py-2.5"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-semibold text-ink">
+                    {rep.name}
+                  </span>
+                  <span className="block truncate text-[13px] text-ink-secondary">
+                    {rep.companyName}
+                  </span>
+                </span>
+                <button
+                  disabled={isPending}
+                  onClick={() => handleArchive(rep.id, rep.name)}
+                  className="shrink-0 text-[13px] font-semibold text-ink-secondary disabled:opacity-40"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {adding ? (
+          <div className="flex flex-col gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <RepField label="Name" value={name} onChange={setName} placeholder="Sunil Rao" />
+              <RepField
+                label="Company"
+                value={companyName}
+                onChange={setCompanyName}
+                placeholder="Zydus"
+              />
+              <RepField label="Phone" value={phone} onChange={setPhone} placeholder="99000 11223" />
+              <RepField
+                label="Division"
+                value={division}
+                onChange={setDivision}
+                placeholder="Cardiology"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <SecondaryButton onClick={reset}>Cancel</SecondaryButton>
+              <div className="max-w-xs flex-1">
+                <PrimaryButton
+                  disabled={
+                    isPending || name.trim().length < 2 || companyName.trim().length < 2
+                  }
+                  onClick={handleAdd}
+                >
+                  {isPending ? "Adding…" : "Add rep"}
+                </PrimaryButton>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAdding(true)}
+            className="text-[14px] font-semibold text-accent"
+          >
+            Add a rep
+          </button>
+        )}
+      </Card>
+    </>
+  );
+}
+
+function RepField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-ink-secondary">
+        {label}
+      </span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={cn(
+          "mt-1 min-h-[var(--touch-min)] w-full rounded-[var(--radius-control)] bg-surface-sunken px-3.5",
+          "text-[16px] text-ink outline-none placeholder:text-ink-secondary/55",
+        )}
+      />
+    </label>
   );
 }
 

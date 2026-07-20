@@ -65,14 +65,17 @@ export async function amendConsultationAction({
   const auth = await requireCurrentStaffCan(clinicId, "consultation:write");
   if (!auth.ok) return auth;
 
-  const result = await amendConsultation({
-    clinicId: await getActiveClinicId(),
-    visitId,
-    actorStaffId: auth.staff.id,
-    actorRoles: auth.staff.roles,
-    reason,
-    edits,
-  });
+  const result = await tenantDb((tx) =>
+    amendConsultation({
+      clinicId,
+      visitId,
+      actorStaffId: auth.staff.id,
+      actorRoles: auth.staff.roles,
+      reason,
+      edits,
+      executor: tx,
+    }),
+  );
 
   if (result.ok) {
     revalidatePath(`/patients/${patientId}`);

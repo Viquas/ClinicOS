@@ -64,12 +64,15 @@ export async function addStaffAction(input: {
   const auth = await requireCurrentStaffCan(clinicId, "staff:manage");
   if (!auth.ok) return auth;
 
-  const result = await addStaff({
-    clinicId: await getActiveClinicId(),
-    actorStaffId: auth.staff.id,
-    actorRoles: auth.staff.roles,
-    ...input,
-  });
+  const result = await tenantDb((tx) =>
+    addStaff({
+      clinicId,
+      actorStaffId: auth.staff.id,
+      actorRoles: auth.staff.roles,
+      ...input,
+      executor: tx,
+    }),
+  );
 
   if (result.ok) revalidatePath("/settings");
   return result;
@@ -86,14 +89,18 @@ export async function updateStaffDetailsAction(input: {
   reason: string;
   edits: StaffDetailEdits;
 }): Promise<UpdateStaffDetailsResult> {
-  const currentStaff = await getCurrentStaff(await getActiveClinicId());
+  const clinicId = await getActiveClinicId();
+  const currentStaff = await getCurrentStaff(clinicId);
 
-  const result = await updateStaffDetails({
-    clinicId: await getActiveClinicId(),
-    actorStaffId: currentStaff.id,
-    actorRoles: currentStaff.roles,
-    ...input,
-  });
+  const result = await tenantDb((tx) =>
+    updateStaffDetails({
+      clinicId,
+      actorStaffId: currentStaff.id,
+      actorRoles: currentStaff.roles,
+      ...input,
+      executor: tx,
+    }),
+  );
 
   if (result.ok) {
     revalidatePath("/settings");
@@ -111,12 +118,15 @@ export async function setStaffActiveAction(input: {
   const auth = await requireCurrentStaffCan(clinicId, "staff:manage");
   if (!auth.ok) return auth;
 
-  const result = await setStaffActive({
-    clinicId: await getActiveClinicId(),
-    actorStaffId: auth.staff.id,
-    actorRoles: auth.staff.roles,
-    ...input,
-  });
+  const result = await tenantDb((tx) =>
+    setStaffActive({
+      clinicId,
+      actorStaffId: auth.staff.id,
+      actorRoles: auth.staff.roles,
+      ...input,
+      executor: tx,
+    }),
+  );
 
   if (result.ok) revalidatePath("/settings");
   return result;
@@ -130,12 +140,15 @@ export async function updateClinicProfileAction(input: {
   const auth = await requireCurrentStaffCan(clinicId, "settings:manage");
   if (!auth.ok) return auth;
 
-  const result = await updateClinicProfile({
-    clinicId,
-    actorStaffId: auth.staff.id,
-    actorRoles: auth.staff.roles,
-    ...input,
-  });
+  const result = await tenantDb((tx) =>
+    updateClinicProfile({
+      clinicId,
+      actorStaffId: auth.staff.id,
+      actorRoles: auth.staff.roles,
+      ...input,
+      executor: tx,
+    }),
+  );
 
   if (result.ok) {
     revalidatePath("/settings");
