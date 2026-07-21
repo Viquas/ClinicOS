@@ -3,13 +3,15 @@
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PrimaryButton, SecondaryButton } from "@/components/ui/primary-button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { StatusPill } from "@/components/ui/status";
 import { ScreenHeader } from "@/components/screen-header";
 import type { ChildVaccinationRow } from "@/db/queries/vaccinations";
 import type { ScheduledDose } from "@/lib/clinical/vaccines";
 import { cn } from "@/lib/utils";
+import { whatsAppLink } from "@/lib/whatsapp";
+import { Printer, Send } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { recordDoseAction } from "./actions";
 
@@ -29,9 +31,11 @@ import { recordDoseAction } from "./actions";
 export function VaccinationsBoard({
   roster,
   doctors,
+  clinicName,
 }: {
   roster: ChildVaccinationRow[];
   doctors: { id: string; name: string }[];
+  clinicName: string;
 }) {
   const [view, setView] = useState<"due" | "child">("due");
   /* A dose is nurse-given but doctor-supervised, and the record names which
@@ -171,23 +175,37 @@ export function VaccinationsBoard({
                   </ul>
 
                   <div className="mt-4 flex items-center gap-3">
-                    {sent ? (
-                      <StatusPill tone="success">
-                        Reminder sent on WhatsApp
-                      </StatusPill>
-                    ) : (
-                      <div className="max-w-xs flex-1">
-                        <PrimaryButton
+                    {(() => {
+                      const due = child.owed.map((d) => d.dose.name).join(", ");
+                      const link = whatsAppLink(
+                        child.phone,
+                        `Namaste${child.guardianName ? ` ${child.guardianName}` : ""}, a reminder from ${clinicName}: ${child.name}'s vaccination${child.owed.length > 1 ? "s" : ""} (${due}) ${child.owed.length > 1 ? "are" : "is"} due. Please visit at your convenience.`,
+                      );
+                      if (!link) {
+                        return (
+                          <StatusPill tone="neutral">No phone on file</StatusPill>
+                        );
+                      }
+                      return (
+                        <a
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           onClick={() =>
                             setReminded((prev) =>
                               new Set(prev).add(child.patientId),
                             )
                           }
+                          className="flex min-h-[var(--touch-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-accent px-5 text-[15px] font-semibold text-accent-ink shadow-[0_8px_20px_-8px_var(--accent)] transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                         >
-                          Send WhatsApp reminder
-                        </PrimaryButton>
-                      </div>
-                    )}
+                          <Send size={17} />
+                          {sent ? "Open reminder again" : "Send WhatsApp reminder"}
+                        </a>
+                      );
+                    })()}
+                    {sent ? (
+                      <StatusPill tone="success">Reminder opened</StatusPill>
+                    ) : null}
                   </div>
                 </Card>
               );
@@ -285,7 +303,14 @@ export function VaccinationsBoard({
               </Card>
 
               <div className="mt-5 flex items-center gap-3">
-                <SecondaryButton>Print schedule card</SecondaryButton>
+                <Link
+                  href={`/print/vaccines/${selected.patientId}`}
+                  target="_blank"
+                  className="flex min-h-[var(--touch-min)] items-center gap-2 rounded-[var(--radius-control)] px-4 text-[16px] font-semibold text-accent transition-opacity active:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                >
+                  <Printer size={18} />
+                  Print schedule card
+                </Link>
               </div>
             </>
           ) : null}
