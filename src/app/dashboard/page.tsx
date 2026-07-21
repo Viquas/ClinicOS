@@ -6,12 +6,12 @@ import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { GroupedList, Row, SectionLabel } from "@/components/ui/card";
-import { PrimaryButton } from "@/components/ui/primary-button";
 import { StatusPill } from "@/components/ui/status";
 import { GradientPanel, MiniBars, StatTile } from "@/components/ui/stat-tile";
 import { getDashboard } from "@/db/queries/dashboard";
 import { formatPaise } from "@/lib/billing/gst";
-import { IndianRupee, Package, Stethoscope, Users } from "lucide-react";
+import { IndianRupee, Package, Printer, Stethoscope, Users } from "lucide-react";
+import Link from "next/link";
 
 /*
  * Always render against current clinic state. Without this, Next statically
@@ -186,7 +186,14 @@ export default async function DashboardPage() {
       ) : null}
 
       <div className="max-w-sm">
-        <PrimaryButton>Export monthly statement</PrimaryButton>
+        <Link
+          href="/print/statement"
+          target="_blank"
+          className="flex w-full min-h-[var(--touch-primary)] items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-accent px-6 text-[17px] font-semibold text-accent-ink shadow-[0_8px_20px_-8px_var(--accent)] transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          <Printer size={19} />
+          Export monthly statement
+        </Link>
       </div>
     </>
   );

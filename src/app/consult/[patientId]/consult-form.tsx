@@ -9,7 +9,8 @@ import { StatusPill } from "@/components/ui/status";
 import { findAllergyConflicts } from "@/lib/clinical/allergy";
 import { ageLabel, titleCase } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { Check, Plus, X } from "lucide-react";
+import { Check, Plus, Printer, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { recordConsultationAction } from "./actions";
@@ -87,6 +88,7 @@ export function ConsultForm({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [diagnosis, setDiagnosis] = useState("");
   const [advice, setAdvice] = useState("");
@@ -149,12 +151,51 @@ export function ConsultForm({
         })),
       });
       if (result.ok) {
-        router.push("/queue");
+        /* A prescription was written — pause on a handoff so the doctor can
+           print or WhatsApp it while the patient is still in the room. An
+           advice-only visit has nothing to hand over, so it returns straight
+           to the queue as before. */
+        if (lines.length > 0) setSaved(true);
+        else router.push("/queue");
       } else {
         setError(result.error);
       }
     });
   };
+
+  if (saved) {
+    return (
+      <div className="mx-auto max-w-[440px] pt-8">
+        <Card className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft text-accent">
+            <Check size={30} />
+          </span>
+          <h1 className="text-[22px] font-extrabold tracking-[-0.02em] text-ink">
+            Consultation saved
+          </h1>
+          <p className="max-w-[34ch] text-[15px] leading-snug text-ink-secondary">
+            {patient.name}&apos;s prescription is ready. Hand it over now, or go
+            back — you can always reprint it from the patient&apos;s record.
+          </p>
+
+          <Link
+            href={`/print/rx/${visitId}`}
+            target="_blank"
+            className="mt-3 flex w-full min-h-[var(--touch-primary)] items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-accent px-6 text-[17px] font-semibold text-accent-ink shadow-[0_8px_20px_-8px_var(--accent)] transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            <Printer size={19} />
+            Print or WhatsApp prescription
+          </Link>
+          <button
+            onClick={() => router.push("/queue")}
+            className="min-h-[var(--touch-min)] text-[16px] font-semibold text-accent"
+          >
+            Done — back to queue
+          </button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <>
