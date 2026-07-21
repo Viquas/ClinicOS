@@ -10,6 +10,7 @@ import type { DispensingContext } from "@/db/queries/dispensing";
 import { daysToExpiry, isExpired, selectableBatches } from "@/lib/pharmacy/fefo";
 import { titleCase } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { dispenseAction } from "./actions";
 
@@ -85,10 +86,18 @@ export function PharmacyCounter({
           title="Pharmacy"
           subtitle={`Token ${context.tokenNumber} · ${context.patient.name}`}
         />
-        <EmptyState
-          title="Dispensed"
-          hint={`${done.length} item${done.length > 1 ? "s" : ""} dispensed. Stock decremented against the selected batches, and any Schedule H1 lines recorded in the register.`}
-        />
+        <Card className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft text-accent">
+            <Check size={30} />
+          </span>
+          <p className="text-[19px] font-bold text-ink">
+            {done.length} item{done.length > 1 ? "s" : ""} dispensed
+          </p>
+          <p className="max-w-[40ch] text-[15px] leading-snug text-ink-secondary">
+            Stock was decremented against the selected batches, and any Schedule
+            H1 lines recorded in the register.
+          </p>
+        </Card>
       </>
     );
   }

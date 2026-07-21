@@ -396,7 +396,9 @@ function TimelineTab({
                     {visit.amended ? (
                       <button
                         onClick={() => toggleExpanded(visit.visitId)}
-                        className="rounded-full"
+                        aria-expanded={isExpanded}
+                        aria-label={`${isExpanded ? "Hide" : "Show"} what changed in this amended entry`}
+                        className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                       >
                         <StatusPill tone="warning">Amended</StatusPill>
                       </button>

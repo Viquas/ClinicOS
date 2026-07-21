@@ -55,12 +55,16 @@ export function DisplayBoard({
   }, [router]);
 
   return (
-    <main className="min-h-screen bg-[#071219] px-8 py-8 text-[#eaf3f8]">
+    /* Always dark — a waiting-room TV, never the app's day theme. The `dark`
+       class resolves the design tokens to their dark values here regardless of
+       the hour, so this screen uses the same tokens as everything else rather
+       than re-typing their hex (which would silently drift if a token moved). */
+    <main className="dark min-h-screen bg-canvas px-8 py-8 text-ink">
       <header className="mb-10 flex items-baseline justify-between">
         <h1 className="text-[44px] font-extrabold tracking-[-0.03em]">
           {clinicName}
         </h1>
-        <span className="tabular text-[32px] font-bold text-[#8ba6b8]">
+        <span className="tabular text-[32px] font-bold text-ink-secondary">
           {now}
         </span>
       </header>
@@ -82,14 +86,14 @@ export function DisplayBoard({
           return (
             <section
               key={doctor.id}
-              className="rounded-[32px] bg-[#0e1d27] p-8"
+              className="rounded-[32px] bg-surface p-8"
             >
-              <h2 className="text-[26px] font-bold text-[#8ba6b8]">
+              <h2 className="text-[26px] font-bold text-ink-secondary">
                 {doctor.name}
               </h2>
 
               <div className="mt-5">
-                <p className="text-[18px] font-semibold uppercase tracking-[0.08em] text-[#8ba6b8]">
+                <p className="text-[18px] font-semibold uppercase tracking-[0.08em] text-ink-secondary">
                   Now serving
                 </p>
                 <p
@@ -99,7 +103,9 @@ export function DisplayBoard({
                        from across a room by someone who is not looking at it
                        continuously. */
                     "text-[140px]",
-                    serving ? "text-[#16c47c]" : "text-[#2a3f4d]",
+                    /* #2a3f4d is a bespoke "empty big number" dim with no token
+                       — dimmer than any surface, brighter than the canvas. */
+                    serving ? "text-accent" : "text-[#2a3f4d]",
                   )}
                 >
                   {serving ? serving.number : "—"}
@@ -107,12 +113,12 @@ export function DisplayBoard({
               </div>
 
               <div className="mt-6 border-t border-white/10 pt-5">
-                <p className="text-[18px] font-semibold uppercase tracking-[0.08em] text-[#8ba6b8]">
+                <p className="text-[18px] font-semibold uppercase tracking-[0.08em] text-ink-secondary">
                   Next
                 </p>
                 <ol className="mt-3 flex flex-wrap gap-3">
                   {upcoming.length === 0 ? (
-                    <li className="text-[28px] font-semibold text-[#5b7286]">
+                    <li className="text-[28px] font-semibold text-ink-secondary/70">
                       No one waiting
                     </li>
                   ) : (
@@ -124,8 +130,8 @@ export function DisplayBoard({
                           /* Priority is shown, but as emphasis only — the
                              reason for it is clinical and stays private. */
                           entry.isPriority
-                            ? "bg-[#ff6369]/15 text-[#ff6369]"
-                            : "bg-white/[0.07] text-[#eaf3f8]",
+                            ? "bg-alert/15 text-alert"
+                            : "bg-white/[0.07] text-ink",
                         )}
                       >
                         {entry.number}
@@ -139,7 +145,7 @@ export function DisplayBoard({
         })}
       </div>
 
-      <footer className="mt-10 text-center text-[20px] text-[#5b7286]">
+      <footer className="mt-10 text-center text-[20px] text-ink-secondary/70">
         Please wait for your number to be called
       </footer>
     </main>
