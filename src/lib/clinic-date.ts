@@ -73,3 +73,12 @@ export function clinicDayLabel(today: string): string {
     month: "long",
   });
 }
+
+/** "July 2026" — the dashboard's month label, in the clinic's own timezone. */
+export function clinicMonthLabel(today: string): string {
+  return new Date(`${today}T12:00:00Z`).toLocaleDateString("en-IN", {
+    timeZone: CLINIC_TIME_ZONE,
+    month: "long",
+    year: "numeric",
+  });
+}

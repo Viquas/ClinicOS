@@ -1,6 +1,7 @@
 import { ScreenHeader } from "@/components/screen-header";
-import { clinicToday, clinicMonthBounds } from "@/lib/clinic-date";
+import { clinicToday, clinicMonthBounds, clinicMonthLabel } from "@/lib/clinic-date";
 import { tenantDb } from "@/db/tenant-db";
+import { getClinicProfile } from "@/db/queries/clinic";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
 import { AlertBanner } from "@/components/ui/alert-banner";
@@ -43,9 +44,10 @@ export default async function DashboardPage() {
   const { start: MONTH_START, end: MONTH_END } = clinicMonthBounds();
   const clinicId = await getActiveClinicId();
   await requireRouteAccess(clinicId, "/dashboard");
-  const data = await tenantDb((tx) =>
-    getDashboard(clinicId, MONTH_START, MONTH_END, TODAY, tx),
-  );
+  const [data, clinic] = await Promise.all([
+    tenantDb((tx) => getDashboard(clinicId, MONTH_START, MONTH_END, TODAY, tx)),
+    getClinicProfile(clinicId),
+  ]);
 
   const alertCount = data.expiringAlerts.length + data.lowStock.length;
   const consultShare =
@@ -59,7 +61,10 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <ScreenHeader title="This month" subtitle="Vatsalya Child Care · July 2026" />
+      <ScreenHeader
+        title="This month"
+        subtitle={`${clinic?.name ?? "Your clinic"} · ${clinicMonthLabel(TODAY)}`}
+      />
 
       <GradientPanel tint="sky" className="mb-6">
         <p className="text-[15px] font-semibold text-ink-secondary">

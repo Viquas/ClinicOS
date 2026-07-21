@@ -36,5 +36,5 @@ export default async function PharmacyPage() {
     );
   }
 
-  return <PharmacyCounter context={context} />;
+  return <PharmacyCounter context={context} today={TODAY} />;
 }

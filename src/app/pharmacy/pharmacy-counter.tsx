@@ -13,9 +13,6 @@ import { cn } from "@/lib/utils";
 import { useMemo, useState, useTransition } from "react";
 import { dispenseAction } from "./actions";
 
-/* Scenario date — becomes the real clock once the seed uses live dates. */
-const TODAY = new Date("2026-07-18T10:15:00+05:30");
-
 /**
  * Pharmacy dispensing counter (§7.5).
  *
@@ -28,7 +25,16 @@ const TODAY = new Date("2026-07-18T10:15:00+05:30");
  * The dispense mutation re-checks expiry and quantity against the locked row,
  * so a stale page cannot dispense a batch that expired since it loaded.
  */
-export function PharmacyCounter({ context }: { context: DispensingContext }) {
+export function PharmacyCounter({
+  context,
+  today,
+}: {
+  context: DispensingContext;
+  /** The clinic's own "today" (YYYY-MM-DD), resolved server-side. Noon UTC
+      keeps `toIsoDate` on the same calendar day the query filtered against. */
+  today: string;
+}) {
+  const TODAY = useMemo(() => new Date(`${today}T12:00:00Z`), [today]);
   const [chosen, setChosen] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ batchNo: string; quantity: number }[] | null>(
@@ -47,7 +53,7 @@ export function PharmacyCounter({ context }: { context: DispensingContext }) {
         );
         return { line, selectable, selectedId, available };
       }),
-    [context.lines, chosen],
+    [context.lines, chosen, TODAY],
   );
 
   const shortfalls = rows.filter((r) => r.available < r.line.quantity);

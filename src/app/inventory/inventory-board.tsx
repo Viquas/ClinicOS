@@ -14,19 +14,19 @@ import { cn } from "@/lib/utils";
 import { useState, useTransition } from "react";
 import { addPurchaseAction } from "./actions";
 
-/* Scenario date — becomes the real clock once the seed uses live dates. */
-const TODAY = new Date("2026-07-18T10:00:00+05:30");
-
 type FormularyItem = { id: string; name: string; unit: string };
 
 export function InventoryBoard({
   stock,
   h1,
   formulary,
+  today,
 }: {
   stock: StockItem[];
   h1: H1Entry[];
   formulary: FormularyItem[];
+  /** The clinic's own "today" (YYYY-MM-DD), resolved server-side. */
+  today: string;
 }) {
   const [tab, setTab] = useState<"stock" | "purchase" | "h1">("stock");
 
@@ -48,14 +48,16 @@ export function InventoryBoard({
         ]}
       />
 
-      {tab === "stock" ? <StockTab stock={stock} /> : null}
+      {tab === "stock" ? <StockTab stock={stock} today={today} /> : null}
       {tab === "purchase" ? <PurchaseTab formulary={formulary} /> : null}
       {tab === "h1" ? <H1Tab entries={h1} /> : null}
     </>
   );
 }
 
-function StockTab({ stock }: { stock: StockItem[] }) {
+function StockTab({ stock, today }: { stock: StockItem[]; today: string }) {
+  /* Noon UTC keeps `toIsoDate` on the same calendar day server-side used. */
+  const TODAY = new Date(`${today}T12:00:00Z`);
   return (
     <div className="flex flex-col gap-3">
       {stock.map((item) => {

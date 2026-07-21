@@ -1,4 +1,5 @@
 import { getStock } from "@/db/queries/pharmacy";
+import { clinicToday } from "@/lib/clinic-date";
 import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
 import { requireRouteAccess } from "@/lib/auth/route-access";
@@ -26,6 +27,7 @@ export default async function InventoryPage() {
       stock={stock}
       h1={h1}
       formulary={stock.map((s) => ({ id: s.id, name: s.name, unit: s.unit }))}
+      today={clinicToday()}
     />
   );
 }
