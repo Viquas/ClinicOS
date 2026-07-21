@@ -8,6 +8,8 @@ import { StatusPill } from "@/components/ui/status";
 import type { BillDraft } from "@/db/queries/billing";
 import { formatPaise, lineTotalPaise, type BillLine } from "@/lib/billing/gst";
 import { cn } from "@/lib/utils";
+import { Printer } from "lucide-react";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { recordBillAction } from "./actions";
 
@@ -155,9 +157,16 @@ export function BillingScreen({
             : `Collect ${formatPaise(totals.payablePaise)} by ${mode.toUpperCase()}`}
       </PrimaryButton>
 
-      <p className="mt-3 text-center text-[13px] text-ink-secondary">
-        Split payments and discounts are available to the owner role.
-      </p>
+      {paid ? (
+        <Link
+          href={`/print/bill/${draft.visitId}`}
+          target="_blank"
+          className="mt-3 flex min-h-[var(--touch-min)] items-center justify-center gap-2 rounded-[var(--radius-pill)] text-[16px] font-semibold text-accent ring-1 ring-inset ring-accent/40 transition-colors hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          <Printer size={18} />
+          Print or WhatsApp receipt
+        </Link>
+      ) : null}
     </>
   );
 }
