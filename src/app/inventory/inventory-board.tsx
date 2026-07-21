@@ -5,6 +5,7 @@ import { AlertBanner } from "@/components/ui/alert-banner";
 import { Card, SectionLabel } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PrimaryButton } from "@/components/ui/primary-button";
+import { SearchInput } from "@/components/ui/search-input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { StatusPill } from "@/components/ui/status";
 import type { StockItem } from "@/db/queries/pharmacy";
@@ -58,9 +59,38 @@ export function InventoryBoard({
 function StockTab({ stock, today }: { stock: StockItem[]; today: string }) {
   /* Noon UTC keeps `toIsoDate` on the same calendar day server-side used. */
   const TODAY = new Date(`${today}T12:00:00Z`);
+  const [query, setQuery] = useState("");
+
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? stock.filter(
+        (item) =>
+          item.name.toLowerCase().includes(q) ||
+          (item.strength ?? "").toLowerCase().includes(q) ||
+          item.form.toLowerCase().includes(q),
+      )
+    : stock;
+
   return (
     <div className="flex flex-col gap-3">
-      {stock.map((item) => {
+      {stock.length > 4 || query ? (
+        <SearchInput
+          className="mb-1"
+          value={query}
+          onChange={setQuery}
+          placeholder="Search medicines"
+          ariaLabel="Search inventory"
+        />
+      ) : null}
+
+      {filtered.length === 0 ? (
+        <EmptyState
+          title={`Nothing matching “${query}”`}
+          hint="Try the brand or generic name, or a strength like 250mg."
+        />
+      ) : null}
+
+      {filtered.map((item) => {
         const live = item.batches.filter((b) => !isExpired(b, TODAY));
         const qty = live.reduce((sum, b) => sum + b.quantityRemaining, 0);
         const expiredCount = item.batches.length - live.length;

@@ -3,6 +3,7 @@
 import { ScreenHeader } from "@/components/screen-header";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Card, GroupedList, Row, SectionLabel } from "@/components/ui/card";
+import { Dialog, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/primary-button";
 import { StatusPill } from "@/components/ui/status";
@@ -274,6 +275,9 @@ export function MrBoard({
 function RepDirectory({ directory }: { directory: DirectoryRep[] }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -336,7 +340,7 @@ function RepDirectory({ directory }: { directory: DirectoryRep[] }) {
                 </span>
                 <button
                   disabled={isPending}
-                  onClick={() => handleArchive(rep.id, rep.name)}
+                  onClick={() => setConfirming({ id: rep.id, name: rep.name })}
                   className="shrink-0 text-[13px] font-semibold text-ink-secondary disabled:opacity-40"
                 >
                   Remove
@@ -387,6 +391,36 @@ function RepDirectory({ directory }: { directory: DirectoryRep[] }) {
           </button>
         )}
       </Card>
+
+      {confirming ? (
+        <Dialog onClose={() => setConfirming(null)}>
+          <Card className="w-full max-w-sm p-6">
+            <DialogTitle className="text-[19px] font-bold tracking-[-0.015em] text-ink">
+              Remove {confirming.name}?
+            </DialogTitle>
+            <p className="mt-2 text-[15px] leading-snug text-ink-secondary">
+              They stop appearing in the walk-in picker. Their visit history is
+              kept, not deleted — this only archives the directory entry.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <SecondaryButton onClick={() => setConfirming(null)}>
+                Cancel
+              </SecondaryButton>
+              <PrimaryButton
+                tone="neutral"
+                className="w-auto px-5"
+                disabled={isPending}
+                onClick={() => {
+                  handleArchive(confirming.id, confirming.name);
+                  setConfirming(null);
+                }}
+              >
+                Remove
+              </PrimaryButton>
+            </div>
+          </Card>
+        </Dialog>
+      ) : null}
     </>
   );
 }

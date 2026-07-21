@@ -6,9 +6,11 @@ import { Card, SectionLabel } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { maskPhone } from "@/components/ui/identity-header";
 import { PrimaryButton } from "@/components/ui/primary-button";
+import { SearchInput } from "@/components/ui/search-input";
 import { StatusPill } from "@/components/ui/status";
 import { StatTile } from "@/components/ui/stat-tile";
 import { formatPaise } from "@/lib/billing/gst";
+import { useState } from "react";
 
 type MessageRow = {
   id: string;
@@ -65,12 +67,26 @@ const STATUS_TONE: Record<string, "success" | "accent" | "neutral" | "alert"> =
   };
 
 export function MessagesBoard({ messages }: { messages: MessageRow[] }) {
+  const [query, setQuery] = useState("");
   const queued = messages.filter((m) => m.status === "queued");
   const failed = messages.filter((m) => m.status === "failed");
   const billable = messages.filter(
     (m) => m.status === "sent" || m.status === "delivered",
   );
   const spentPaise = billable.length * ESTIMATED_UTILITY_RATE_PAISE;
+
+  const q = query.trim().toLowerCase();
+  const shown = q
+    ? messages.filter((m) => {
+        const name = patientNameFrom(m.payload)?.toLowerCase() ?? "";
+        return (
+          name.includes(q) ||
+          m.toPhone.includes(q) ||
+          m.status.toLowerCase().includes(q) ||
+          humanizeTemplate(m.templateName).toLowerCase().includes(q)
+        );
+      })
+    : messages;
 
   return (
     <>
@@ -116,9 +132,25 @@ export function MessagesBoard({ messages }: { messages: MessageRow[] }) {
             </div>
           ) : null}
 
+          {messages.length > 6 || query ? (
+            <SearchInput
+              className="mb-4"
+              value={query}
+              onChange={setQuery}
+              placeholder="Search by name, phone, or status"
+              ariaLabel="Search messages"
+            />
+          ) : null}
+
           <SectionLabel>Sent</SectionLabel>
+          {shown.length === 0 ? (
+            <EmptyState
+              title={`No message matching “${query}”`}
+              hint="Search by patient name, phone number, delivery status, or message type."
+            />
+          ) : null}
           <div className="mb-6 flex flex-col gap-2.5">
-            {messages.map((message) => {
+            {shown.map((message) => {
               const tone = STATUS_TONE[message.status] ?? "neutral";
               const name = patientNameFrom(message.payload);
 
