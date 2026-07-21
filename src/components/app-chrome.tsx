@@ -16,8 +16,12 @@ import { AppNav } from "./app-nav";
  * exist yet, so framing it in the current clinic's nav offers escape hatches
  * into someone else's data and implies the wizard is a screen within that
  * clinic rather than the thing that creates a new one.
+ *
+ * Print routes are bare because they are a paper document rendered to screen:
+ * the nav has no place on a prescription slip, and it must never appear in the
+ * printout.
  */
-const BARE_ROUTES = ["/display", "/login", "/onboarding"];
+const BARE_ROUTES = ["/display", "/login", "/onboarding", "/print"];
 
 export function AppChrome({
   children,

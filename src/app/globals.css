@@ -203,3 +203,34 @@
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
   }
 }
+
+/*
+ * Print — a document rendered to paper, not the app.
+ *
+ * The .print-sheet is the paper: always ink-on-white regardless of the screen
+ * theme (a prescription is never printed dark), constrained to a readable
+ * measure on screen and edge-to-edge on paper. @page owns the physical margin
+ * so the sheet's own padding is the only inner gutter. Everything outside the
+ * sheet (the action bar) already carries `print:hidden`.
+ */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  /* Honour the sheet's hairlines and tints when the browser would otherwise
+     drop backgrounds to save ink. */
+  .print-sheet {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    box-shadow: none !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+}

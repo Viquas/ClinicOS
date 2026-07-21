@@ -14,7 +14,7 @@ import type { RevisionRow } from "@/db/queries/revisions";
 import type { StaffRole } from "@/lib/auth/claims";
 import { ageLabel, titleCase } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { FileText, ImageIcon, Paperclip, Pencil } from "lucide-react";
+import { FileText, ImageIcon, Paperclip, Pencil, Printer } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { amendConsultationAction, updatePatientAction } from "./actions";
@@ -461,15 +461,29 @@ function TimelineTab({
                   </div>
                 ) : null}
 
-                {visit.diagnosis !== null && canAmend(visit) ? (
-                  <div className="mt-3 border-t border-hairline pt-3">
-                    <button
-                      onClick={() => setAmending(visit)}
+                {visit.diagnosis !== null ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-hairline pt-3">
+                    {/* A past visit is re-printable on demand — a patient who
+                        lost the slip, or a pharmacy asking for a fresh copy,
+                        is routine. Opens the paper view in its own tab so the
+                        record stays put behind it. */}
+                    <Link
+                      href={`/print/rx/${visit.visitId}`}
+                      target="_blank"
                       className="flex items-center gap-1.5 text-[13px] font-semibold text-accent"
                     >
-                      <Pencil size={13} />
-                      Amend this entry
-                    </button>
+                      <Printer size={13} />
+                      Print Rx
+                    </Link>
+                    {canAmend(visit) ? (
+                      <button
+                        onClick={() => setAmending(visit)}
+                        className="flex items-center gap-1.5 text-[13px] font-semibold text-accent"
+                      >
+                        <Pencil size={13} />
+                        Amend this entry
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
               </Card>
