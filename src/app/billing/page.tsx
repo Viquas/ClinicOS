@@ -6,6 +6,8 @@ import { requireRouteAccess } from "@/lib/auth/route-access";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getBillableVisit } from "@/db/queries/billable";
 import { getBillDraft } from "@/db/queries/billing";
+import { getCurrentStaff } from "@/lib/auth/current-staff";
+import { can } from "@/lib/auth/permissions";
 import { BillingScreen } from "./billing-screen";
 
 /*
@@ -49,11 +51,14 @@ export default async function BillingPage() {
     );
   }
 
+  const staff = await getCurrentStaff(clinicId);
+
   return (
     <BillingScreen
       draft={draft}
       tokenNumber={billable.tokenNumber}
       patientName={billable.patientName}
+      canDiscount={can(staff.roles, "bill:discount")}
     />
   );
 }

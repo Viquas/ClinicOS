@@ -34,19 +34,36 @@ export function BillingScreen({
   draft,
   tokenNumber,
   patientName,
+  canDiscount,
 }: {
   draft: BillDraft;
   tokenNumber: number;
   patientName: string;
+  /* Whether the signed-in staff hold bill:discount (owner). The control is
+     hidden otherwise, and the server refuses a discount regardless. */
+  canDiscount: boolean;
 }) {
   const [mode, setMode] = useState<"cash" | "upi" | "card">("upi");
   const [paid, setPaid] = useState(draft.alreadyBilled);
   const [error, setError] = useState<string | null>(null);
+  const [showDiscount, setShowDiscount] = useState(false);
+  const [discountRupees, setDiscountRupees] = useState("");
+  const [discountReason, setDiscountReason] = useState("");
   const [isPending, startTransition] = useTransition();
 
   const services = draft.lines.filter((l) => l.kind === "service");
   const goods = draft.lines.filter((l) => l.kind === "goods");
   const { totals } = draft;
+
+  /* Preview only — the server recomputes and re-clamps. Parsed to paise, never
+     below zero, never more than the bill itself. */
+  const rawDiscountPaise = Math.round((parseFloat(discountRupees) || 0) * 100);
+  const discountPaise =
+    canDiscount && rawDiscountPaise > 0
+      ? Math.min(rawDiscountPaise, totals.payablePaise)
+      : 0;
+  const netPayable = totals.payablePaise - discountPaise;
+  const discountNeedsReason = discountPaise > 0 && discountReason.trim().length < 3;
 
   const collect = () => {
     setError(null);
@@ -63,6 +80,10 @@ export function BillingScreen({
           gstRate: line.gstRate,
         })),
         mode,
+        discount:
+          discountPaise > 0
+            ? { amountPaise: discountPaise, reason: discountReason.trim() }
+            : undefined,
       });
 
       if (result.ok) setPaid(true);
@@ -124,16 +145,82 @@ export function BillingScreen({
             </>
           ) : null}
 
+          {discountPaise > 0 ? (
+            <SummaryRow
+              label="Discount"
+              value={`− ${formatPaise(discountPaise)}`}
+            />
+          ) : null}
+
           <div className="mt-1 border-t border-hairline pt-3">
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-[17px] font-bold text-ink">Total payable</dt>
               <dd className="tabular text-[28px] font-extrabold tracking-[-0.025em] text-ink">
-                {formatPaise(totals.payablePaise)}
+                {formatPaise(netPayable)}
               </dd>
             </div>
           </div>
         </dl>
       </Card>
+
+      {canDiscount && !paid ? (
+        <div className="mb-5">
+          {showDiscount ? (
+            <Card className="p-5">
+              <div className="flex items-baseline justify-between">
+                <h3 className="text-[15px] font-bold text-ink">Owner discount</h3>
+                <button
+                  onClick={() => {
+                    setShowDiscount(false);
+                    setDiscountRupees("");
+                    setDiscountReason("");
+                  }}
+                  className="text-[14px] font-semibold text-accent"
+                >
+                  Remove
+                </button>
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-[140px_1fr]">
+                <label className="block">
+                  <span className="text-[12px] font-semibold uppercase tracking-[0.04em] text-ink-secondary">
+                    Amount (₹)
+                  </span>
+                  <input
+                    value={discountRupees}
+                    onChange={(e) => setDiscountRupees(e.target.value)}
+                    inputMode="decimal"
+                    placeholder="50"
+                    className="mt-1 w-full rounded-[var(--radius-control)] bg-surface-sunken px-3.5 py-3 text-[16px] text-ink outline-none placeholder:text-ink-secondary/60"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[12px] font-semibold uppercase tracking-[0.04em] text-ink-secondary">
+                    Reason
+                  </span>
+                  <input
+                    value={discountReason}
+                    onChange={(e) => setDiscountReason(e.target.value)}
+                    placeholder="Staff family · goodwill"
+                    className="mt-1 w-full rounded-[var(--radius-control)] bg-surface-sunken px-3.5 py-3 text-[16px] text-ink outline-none placeholder:text-ink-secondary/60"
+                  />
+                </label>
+              </div>
+              {discountNeedsReason ? (
+                <p className="mt-2 text-[13px] font-semibold text-warning">
+                  A reason is required — a discount is never anonymous.
+                </p>
+              ) : null}
+            </Card>
+          ) : (
+            <button
+              onClick={() => setShowDiscount(true)}
+              className="text-[14px] font-semibold text-accent"
+            >
+              + Apply a discount
+            </button>
+          )}
+        </div>
+      ) : null}
 
       <SectionLabel>Payment</SectionLabel>
       <SegmentedControl
@@ -149,12 +236,15 @@ export function BillingScreen({
         </p>
       ) : null}
 
-      <PrimaryButton onClick={collect} disabled={paid || isPending}>
+      <PrimaryButton
+        onClick={collect}
+        disabled={paid || isPending || discountNeedsReason}
+      >
         {paid
           ? "Payment recorded"
           : isPending
             ? "Recording…"
-            : `Collect ${formatPaise(totals.payablePaise)} by ${mode.toUpperCase()}`}
+            : `Collect ${formatPaise(netPayable)} by ${mode.toUpperCase()}`}
       </PrimaryButton>
 
       {paid ? (

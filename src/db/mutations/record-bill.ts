@@ -48,6 +48,7 @@ export async function recordBill({
   lines,
   mode,
   actorStaffId,
+  discount,
   executor = db,
 }: {
   clinicId: string;
@@ -55,12 +56,26 @@ export async function recordBill({
   lines: (BillLine & { batchId?: string })[];
   mode: "cash" | "upi" | "card";
   actorStaffId: string | null;
+  /*
+   * An owner-only courtesy reduction on the whole bill (§7.7). Reason is
+   * required so a discount is never anonymous — the schema keeps who applied it
+   * and why. Absent for an ordinary bill. The caller is responsible for having
+   * checked bill:discount before passing this; the mutation only records it.
+   */
+  discount?: { amountPaise: number; reason: string };
   /* Pass the tenant transaction to run under RLS; its own transaction
      then nests as a savepoint rather than taking a fresh connection. */
   executor?: Executor;
 }): Promise<RecordBillResult> {
   if (lines.length === 0) {
     return { ok: false, error: "Nothing to bill" };
+  }
+
+  if (discount && (!Number.isFinite(discount.amountPaise) || discount.amountPaise < 0)) {
+    return { ok: false, error: "Discount must be zero or more" };
+  }
+  if (discount && discount.amountPaise > 0 && !discount.reason.trim()) {
+    return { ok: false, error: "A reason is required for a discount" };
   }
 
   try {
@@ -93,7 +108,11 @@ export async function recordBill({
         return { ok: false as const, error: "This visit is already billed" };
       }
 
-      const totals = computeTotals(lines, { isGstRegistered: true });
+      const totals = computeTotals(lines, {
+        isGstRegistered: true,
+        discountPaise: discount?.amountPaise ?? 0,
+      });
+      const applied = discount && totals.discountPaise > 0;
 
       const [bill] = await tx
         .insert(bills)
@@ -101,6 +120,9 @@ export async function recordBill({
           clinicId,
           visitId,
           subtotal: paise(totals.grossPaise),
+          discountAmount: paise(totals.discountPaise),
+          discountReason: applied ? discount.reason.trim() : null,
+          discountByStaffId: applied ? actorStaffId : null,
           taxAmount: paise(totals.taxPaise),
           total: paise(totals.payablePaise),
           amountPaid: paise(totals.payablePaise),
@@ -141,7 +163,13 @@ export async function recordBill({
         action: "bill_recorded",
         entityTable: "bills",
         entityId: bill.id,
-        detail: { mode, total: totals.payablePaise },
+        detail: {
+          mode,
+          total: totals.payablePaise,
+          ...(applied
+            ? { discount: totals.discountPaise, discountReason: discount.reason.trim() }
+            : {}),
+        },
       });
 
       return { ok: true as const, billId: bill.id };

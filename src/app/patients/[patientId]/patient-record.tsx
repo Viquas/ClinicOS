@@ -629,7 +629,7 @@ function FilesTab({ files }: { files: PatientFileRow[] }) {
     return (
       <EmptyState
         title="No attachments"
-        hint="Lab reports, external prescriptions and photos uploaded from the tablet camera appear here."
+        hint="Lab reports, external prescriptions and photos attached to this patient's visits appear here."
       />
     );
   }

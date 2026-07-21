@@ -124,6 +124,52 @@ describe("recordBill", () => {
     expect(Number(payment.amount)).toBe(412);
   });
 
+  it("applies an owner discount and records who and why", async () => {
+    const result = await recordBill({
+      clinicId: CLINIC,
+      visitId,
+      lines: LINES,
+      mode: "cash",
+      actorStaffId: STAFF,
+      discount: { amountPaise: 5000, reason: "Staff family" },
+    });
+    if (!result.ok) throw new Error("expected success");
+
+    const [bill] = await db
+      .select({
+        total: bills.total,
+        discount: bills.discountAmount,
+        reason: bills.discountReason,
+        by: bills.discountByStaffId,
+      })
+      .from(bills)
+      .where(eq(bills.id, result.billId));
+
+    /* ₹412 gross − ₹50 discount = ₹362 payable, and the discount is attributed. */
+    expect(Number(bill.total)).toBe(362);
+    expect(Number(bill.discount)).toBe(50);
+    expect(bill.reason).toBe("Staff family");
+    expect(bill.by).toBe(STAFF);
+
+    const [payment] = await db
+      .select({ amount: payments.amount })
+      .from(payments)
+      .where(eq(payments.billId, result.billId));
+    expect(Number(payment.amount)).toBe(362);
+  });
+
+  it("refuses a discount with no reason", async () => {
+    const result = await recordBill({
+      clinicId: CLINIC,
+      visitId,
+      lines: LINES,
+      mode: "cash",
+      actorStaffId: STAFF,
+      discount: { amountPaise: 5000, reason: "  " },
+    });
+    expect(result.ok).toBe(false);
+  });
+
   it("flips the token to billed", async () => {
     await record();
 
