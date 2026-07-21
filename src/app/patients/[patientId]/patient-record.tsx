@@ -250,9 +250,10 @@ function EditPatientDialog({
             </select>
           </label>
           <EditField
-            label="Date of birth (YYYY-MM-DD)"
+            label="Date of birth"
             value={dateOfBirth}
             onChange={setDateOfBirth}
+            type="date"
           />
           <EditField
             label="Guardian name"
@@ -303,10 +304,12 @@ function EditField({
   label,
   value,
   onChange,
+  type = "text",
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  type?: "text" | "date";
 }) {
   return (
     <label className="block">
@@ -314,6 +317,7 @@ function EditField({
         {label}
       </span>
       <input
+        type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="mt-1 w-full rounded-[var(--radius-control)] bg-surface-sunken px-3.5 py-3 text-[16px] text-ink outline-none"

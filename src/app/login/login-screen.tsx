@@ -40,7 +40,13 @@ import {
  */
 const DEMO_PIN = "4071";
 
-export function LoginScreen({ staff }: { staff: StaffRow[] }) {
+export function LoginScreen({
+  staff,
+  clinicName,
+}: {
+  staff: StaffRow[];
+  clinicName: string;
+}) {
   const [isPending, startTransition] = useTransition();
   const [staffId, setStaffId] = useState<string | null>(null);
   const [switchError, setSwitchError] = useState<string | null>(null);
@@ -74,7 +80,7 @@ export function LoginScreen({ staff }: { staff: StaffRow[] }) {
           Who&apos;s using this device?
         </h1>
         <p className="mt-1 text-[15px] text-ink-secondary">
-          Vatsalya Child Care · reception tablet
+          {clinicName} · reception tablet
         </p>
 
         <ul className="mt-6 flex flex-col gap-2.5">

@@ -30,9 +30,11 @@ type Doctor = { id: string; name: string };
 export function DisplayBoard({
   queue,
   doctors,
+  clinicName,
 }: {
   queue: QueueEntry[];
   doctors: Doctor[];
+  clinicName: string;
 }) {
   const router = useRouter();
   const [now, setNow] = useState("");
@@ -56,7 +58,7 @@ export function DisplayBoard({
     <main className="min-h-screen bg-[#071219] px-8 py-8 text-[#eaf3f8]">
       <header className="mb-10 flex items-baseline justify-between">
         <h1 className="text-[44px] font-extrabold tracking-[-0.03em]">
-          Vatsalya Child Care
+          {clinicName}
         </h1>
         <span className="tabular text-[32px] font-bold text-[#8ba6b8]">
           {now}

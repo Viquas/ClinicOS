@@ -351,7 +351,7 @@ function RegisterPatientDialog({
               label="Date of birth"
               value={dateOfBirth}
               onChange={setDateOfBirth}
-              placeholder="YYYY-MM-DD"
+              type="date"
             />
             <RegisterField
               label="Age (years)"
@@ -395,12 +395,14 @@ function RegisterField({
   onChange,
   inputMode,
   placeholder,
+  type = "text",
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   inputMode?: "text" | "tel" | "numeric";
   placeholder?: string;
+  type?: "text" | "date";
 }) {
   return (
     <label className="block">
@@ -408,6 +410,7 @@ function RegisterField({
         {label}
       </span>
       <input
+        type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         inputMode={inputMode}

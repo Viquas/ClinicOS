@@ -199,7 +199,7 @@ function PurchaseTab({ formulary }: { formulary: FormularyItem[] }) {
         ) : null}
         {saved ? (
           <div className="mb-4">
-            <AlertBanner tone="warning" title={saved} />
+            <AlertBanner tone="success" title={saved} />
           </div>
         ) : null}
 
@@ -225,7 +225,7 @@ function PurchaseTab({ formulary }: { formulary: FormularyItem[] }) {
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label="Batch no." value={batchNo} onChange={setBatchNo} placeholder="PC-3418" />
-          <Field label="Expiry (YYYY-MM-DD)" value={expiry} onChange={setExpiry} placeholder="2028-04-30" />
+          <Field label="Expiry" value={expiry} onChange={setExpiry} placeholder="2028-04-30" type="date" />
           <Field label="Quantity" value={quantity} onChange={setQuantity} placeholder="24" inputMode="numeric" />
           <Field label="Cost per unit (₹)" value={cost} onChange={setCost} placeholder="38.50" inputMode="decimal" />
           <Field label="Supplier" value={supplier} onChange={setSupplier} placeholder="Mysuru Pharma" />
@@ -299,12 +299,14 @@ function Field({
   onChange,
   placeholder,
   inputMode,
+  type = "text",
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
   inputMode?: "numeric" | "decimal";
+  type?: "text" | "date";
 }) {
   return (
     <label className="block">
@@ -312,6 +314,7 @@ function Field({
         {label}
       </span>
       <input
+        type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}

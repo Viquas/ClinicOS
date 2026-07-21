@@ -14,19 +14,41 @@ export function AlertBanner({
   detail,
   action,
 }: {
-  tone?: "alert" | "warning";
+  /*
+   * `success` (green) exists so a confirmation never has to borrow the amber
+   * warning tone — doing so undercuts the whole "colour carries meaning"
+   * discipline. `alert` stays exclusively clinical urgency (§8.3).
+   */
+  tone?: "alert" | "warning" | "success";
   title: ReactNode;
   detail?: ReactNode;
   action?: ReactNode;
 }) {
+  const surface =
+    tone === "alert"
+      ? "bg-alert-surface ring-alert/25"
+      : tone === "success"
+        ? "bg-success-surface ring-success/25"
+        : "bg-warning-surface ring-warning/25";
+  const accent =
+    tone === "alert"
+      ? "bg-alert"
+      : tone === "success"
+        ? "bg-success"
+        : "bg-warning";
+  const text =
+    tone === "alert"
+      ? "text-alert"
+      : tone === "success"
+        ? "text-success"
+        : "text-warning";
+
   return (
     <div
-      role="alert"
+      role={tone === "success" ? "status" : "alert"}
       className={cn(
-        "flex items-start gap-3 rounded-[var(--radius-card)] px-4 py-3.5",
-        tone === "alert"
-          ? "bg-alert-surface ring-1 ring-inset ring-alert/25"
-          : "bg-warning-surface ring-1 ring-inset ring-warning/25",
+        "flex items-start gap-3 rounded-[var(--radius-card)] px-4 py-3.5 ring-1 ring-inset",
+        surface,
       )}
     >
       {/*
@@ -35,17 +57,11 @@ export function AlertBanner({
        */}
       <span
         aria-hidden
-        className={cn(
-          "mt-[7px] h-2 w-2 shrink-0 rounded-full",
-          tone === "alert" ? "bg-alert" : "bg-warning",
-        )}
+        className={cn("mt-[7px] h-2 w-2 shrink-0 rounded-full", accent)}
       />
       <div className="min-w-0 flex-1">
         <div
-          className={cn(
-            "text-[15px] font-bold tracking-[-0.01em]",
-            tone === "alert" ? "text-alert" : "text-warning",
-          )}
+          className={cn("text-[15px] font-bold tracking-[-0.01em]", text)}
         >
           {title}
         </div>

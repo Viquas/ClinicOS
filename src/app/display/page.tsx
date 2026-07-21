@@ -1,4 +1,5 @@
 import { getDoctors, getQueue } from "@/db/queries/queue";
+import { getClinicProfile } from "@/db/queries/clinic";
 import { clinicToday } from "@/lib/clinic-date";
 import { tenantDb } from "@/db/tenant-db";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
@@ -16,9 +17,18 @@ export const dynamic = "force-dynamic";
 export default async function DisplayPage() {
   const TODAY = clinicToday();
   const clinicId = await getActiveClinicId();
-  const [queue, doctors] = await tenantDb((tx) =>
-    Promise.all([getQueue(clinicId, TODAY, tx), getDoctors(clinicId, tx)]),
-  );
+  const [[queue, doctors], clinic] = await Promise.all([
+    tenantDb((tx) =>
+      Promise.all([getQueue(clinicId, TODAY, tx), getDoctors(clinicId, tx)]),
+    ),
+    getClinicProfile(clinicId),
+  ]);
 
-  return <DisplayBoard queue={queue} doctors={doctors} />;
+  return (
+    <DisplayBoard
+      queue={queue}
+      doctors={doctors}
+      clinicName={clinic?.name ?? "Our clinic"}
+    />
+  );
 }
