@@ -105,6 +105,7 @@ export function VaccinationsBoard({
             className={cn(
               "mt-1 min-h-[var(--touch-min)] w-full max-w-sm rounded-[var(--radius-control)] bg-surface-sunken px-3.5",
               "text-[16px] text-ink outline-none",
+              "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent",
             )}
           >
             {doctors.map((d) => (
@@ -220,7 +221,8 @@ export function VaccinationsBoard({
                 key={child.patientId}
                 onClick={() => setChildId(child.patientId)}
                 className={cn(
-                  "min-h-[40px] rounded-[var(--radius-pill)] px-4 text-[14px] font-semibold",
+                  "min-h-[44px] rounded-[var(--radius-pill)] px-4 text-[14px] font-semibold",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
                   child.patientId === childId
                     ? "bg-accent text-accent-ink"
                     : "bg-surface-sunken text-ink-secondary",
@@ -287,7 +289,7 @@ export function VaccinationsBoard({
                             onClick={() =>
                               handleRecord(selected.patientId, entry.dose.id)
                             }
-                            className="min-h-[36px] rounded-[var(--radius-pill)] bg-accent px-3.5 text-[13px] font-semibold text-accent-ink disabled:opacity-50"
+                            className="min-h-[44px] rounded-[var(--radius-pill)] bg-accent px-4 text-[13px] font-semibold text-accent-ink transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                           >
                             Record given
                           </button>

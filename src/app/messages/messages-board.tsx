@@ -114,7 +114,7 @@ export function MessagesBoard({ messages }: { messages: MessageRow[] }) {
       {messages.length === 0 ? (
         <EmptyState
           title="No messages yet"
-          hint="Issuing a token, sending a prescription, or a follow-up reminder queues a WhatsApp message here automatically."
+          hint="Issuing a token queues its WhatsApp confirmation here automatically. Prescription and reminder shares open WhatsApp directly and aren't logged."
         />
       ) : (
         <>
@@ -192,12 +192,12 @@ export function MessagesBoard({ messages }: { messages: MessageRow[] }) {
           Send to a patient segment
         </h3>
         <p className="mt-1 text-[14px] leading-snug text-ink-secondary">
-          Not yet connected to a send provider in this environment — this
-          previews the flow without transmitting anything.
+          Broadcasts need a WhatsApp Business send provider, which isn&apos;t
+          connected in this environment yet.
         </p>
 
         <div className="mt-4">
-          <PrimaryButton disabled>Review &amp; send broadcast</PrimaryButton>
+          <PrimaryButton disabled>Not available yet</PrimaryButton>
         </div>
       </Card>
     </>

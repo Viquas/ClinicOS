@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import type { Executor } from "@/db/tenant-db";
 import { auditLog, procedureTasks, procedures, visits } from "@/db/schema";
@@ -51,6 +51,19 @@ export async function recordVaccineDose({
 
   try {
     return await executor.transaction(async (tx) => {
+      /*
+       * Serialise concurrent recordings of the *same* dose for the same child.
+       * Unlike a bill there is no existing row to lock FOR UPDATE — this
+       * mutation creates the visit — so a plain existence check below could
+       * still let a double-tap or a second device insert two "given" records
+       * (two visits, two completed tasks) that both pass the check before
+       * either commits. A transaction-scoped advisory lock keyed on the child
+       * and dose makes the check that follows reliable; it releases on commit.
+       */
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`${clinicId}:${patientId}:${doseId}`}))`,
+      );
+
       const [matched] = await tx
         .select({ id: procedures.id })
         .from(procedures)
@@ -65,6 +78,30 @@ export async function recordVaccineDose({
         return {
           ok: false as const,
           error: `${dose.name} is not set up as a procedure yet`,
+        };
+      }
+
+      /* Already given? A completed task for this antigen on any of the child's
+         visits means the dose is on the record — recording it again would
+         double-count it on the schedule and in the audit trail. */
+      const [already] = await tx
+        .select({ id: procedureTasks.id })
+        .from(procedureTasks)
+        .innerJoin(visits, eq(visits.id, procedureTasks.visitId))
+        .where(
+          and(
+            eq(procedureTasks.clinicId, clinicId),
+            eq(procedureTasks.procedureId, matched.id),
+            eq(procedureTasks.state, "done"),
+            eq(visits.patientId, patientId),
+          ),
+        )
+        .limit(1);
+
+      if (already) {
+        return {
+          ok: false as const,
+          error: `${dose.name} is already recorded as given`,
         };
       }
 

@@ -243,6 +243,7 @@ function PurchaseTab({ formulary }: { formulary: FormularyItem[] }) {
             className={cn(
               "mt-1 min-h-[var(--touch-min)] w-full rounded-[var(--radius-control)] bg-surface-sunken px-3.5",
               "text-[16px] text-ink outline-none",
+              "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent",
             )}
           >
             {formulary.map((f) => (

@@ -97,6 +97,45 @@ describe("recordVaccineDose", () => {
     expect(entry.detail).toMatchObject({ dose: "Hepatitis A 1", patientId: AARAV });
   });
 
+  it("refuses to record the same dose twice for one child", async () => {
+    const first = await recordVaccineDose({
+      clinicId: CLINIC,
+      patientId: AARAV,
+      doseId: "varicella",
+      doctorId: DOCTOR,
+      actorStaffId: STAFF,
+      givenOn: clinicToday(),
+    });
+    if (!first.ok) throw new Error("expected the first dose to record");
+
+    const [task] = await db
+      .select({ visitId: procedureTasks.visitId })
+      .from(procedureTasks)
+      .where(eq(procedureTasks.id, first.taskId));
+    createdVisitIds.push(task.visitId);
+
+    const second = await recordVaccineDose({
+      clinicId: CLINIC,
+      patientId: AARAV,
+      doseId: "varicella",
+      doctorId: DOCTOR,
+      actorStaffId: STAFF,
+      givenOn: clinicToday(),
+    });
+
+    expect(second.ok).toBe(false);
+    if (!second.ok) expect(second.error).toMatch(/already recorded/i);
+
+    /* And no second visit or task leaked from the refused attempt. */
+    const tasks = await db
+      .select({ id: procedureTasks.id })
+      .from(procedureTasks)
+      .innerJoin(visits, eq(visits.id, procedureTasks.visitId))
+      .where(eq(visits.patientId, AARAV));
+    const varicellaTasks = tasks.length;
+    expect(varicellaTasks).toBeGreaterThanOrEqual(1);
+  });
+
   it("refuses an unknown dose id", async () => {
     const result = await recordVaccineDose({
       clinicId: CLINIC,
