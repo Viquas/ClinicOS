@@ -96,6 +96,7 @@ export function ConsultForm({
   const [lines, setLines] = useState<Line[]>([]);
   const [pending, setPending] = useState<StockItem | null>(null);
   const [reason, setReason] = useState("");
+  const [confirmingSign, setConfirmingSign] = useState(false);
 
   const weightKg = vitals?.weightKg;
 
@@ -408,9 +409,16 @@ export function ConsultForm({
       <div className="mt-7">
         <PrimaryButton
           disabled={!diagnosis.trim() || isPending}
-          onClick={handleSave}
+          onClick={() => {
+            if (lines.length > 0) setConfirmingSign(true);
+            else handleSave();
+          }}
         >
-          {isPending ? "Saving…" : "Save & send to pharmacy"}
+          {isPending
+            ? "Saving…"
+            : lines.length > 0
+              ? "Finalize & sign prescription"
+              : "Save & send to pharmacy"}
         </PrimaryButton>
       </div>
 
@@ -472,6 +480,38 @@ export function ConsultForm({
                   }}
                 >
                   Prescribe anyway
+                </PrimaryButton>
+              </div>
+            </div>
+          </Card>
+        </Dialog>
+      ) : null}
+
+      {confirmingSign ? (
+        <Dialog onClose={() => setConfirmingSign(false)}>
+          <Card className="w-full max-w-md p-6">
+            <DialogTitle className="text-[19px] font-bold tracking-[-0.015em] text-ink">
+              Sign this prescription?
+            </DialogTitle>
+            <p className="mt-2 text-[15px] leading-snug text-ink-secondary">
+              {diagnosis.trim()} · {lines.length} medicine
+              {lines.length > 1 ? "s" : ""}. Signing records it under your
+              name and locks it — corrections after this are amendments, never
+              edits.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <SecondaryButton onClick={() => setConfirmingSign(false)}>
+                Go back
+              </SecondaryButton>
+              <div className="max-w-[260px] flex-1">
+                <PrimaryButton
+                  disabled={isPending}
+                  onClick={() => {
+                    setConfirmingSign(false);
+                    handleSave();
+                  }}
+                >
+                  Sign & send to pharmacy
                 </PrimaryButton>
               </div>
             </div>
