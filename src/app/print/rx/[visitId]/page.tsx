@@ -90,7 +90,14 @@ export default async function PrescriptionPrintPage({
 
   return (
     <div className="min-h-screen bg-canvas print:bg-white">
-      <PrintActions waLink={waLink} />
+      <PrintActions
+        waLink={waLink}
+        share={{
+          templateName: "prescription_share",
+          toPhone: patient.phone,
+          patientName: patient.name,
+        }}
+      />
 
       <div className="mx-auto max-w-[820px] px-4 py-6 print:p-0">
         <article className="print-sheet rounded-[8px] bg-white p-8 text-[#0f1c26] shadow-soft sm:p-10 print:rounded-none print:shadow-none">

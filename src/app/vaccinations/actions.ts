@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { logWaShare } from "@/db/mutations/log-wa-share";
 import { recordVaccineDose } from "@/db/mutations/record-vaccine-dose";
 import { getBookableDoctors } from "@/db/queries/queue";
 import { tenantDb } from "@/db/tenant-db";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
+import { getCurrentStaff } from "@/lib/auth/current-staff";
 
 /**
  * A dose is given by a nurse but supervised by a doctor, and the record has
@@ -45,4 +47,26 @@ export async function recordDoseAction(
     revalidatePath("/patients");
   }
   return result;
+}
+
+export async function logReminderShareAction(input: {
+  toPhone: string;
+  patientName: string;
+}): Promise<void> {
+  try {
+    const clinicId = await getActiveClinicId();
+    const staff = await getCurrentStaff(clinicId);
+    await tenantDb((tx) =>
+      logWaShare({
+        clinicId,
+        toPhone: input.toPhone,
+        templateName: "vaccination_reminder_share",
+        patientName: input.patientName,
+        actorStaffId: staff.id,
+        executor: tx,
+      }),
+    );
+  } catch (error) {
+    console.error("logReminderShareAction failed", error);
+  }
 }

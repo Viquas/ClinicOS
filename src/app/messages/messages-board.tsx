@@ -41,9 +41,9 @@ const ESTIMATED_UTILITY_RATE_PAISE = 12;
 
 const TEMPLATE_LABEL: Record<string, string> = {
   token_confirmation: "Token confirmation",
-  prescription_pdf: "Prescription PDF",
-  followup_reminder: "Follow-up reminder",
-  vaccination_due_reminder: "Vaccination due reminder",
+  prescription_share: "Prescription shared",
+  bill_receipt_share: "Receipt shared",
+  vaccination_reminder_share: "Vaccine reminder shared",
 };
 
 function humanizeTemplate(name: string): string {
@@ -64,6 +64,7 @@ const STATUS_TONE: Record<string, "success" | "accent" | "neutral" | "alert"> =
     sent: "accent",
     queued: "neutral",
     failed: "alert",
+    shared: "accent",
   };
 
 export function MessagesBoard({ messages }: { messages: MessageRow[] }) {
@@ -114,7 +115,7 @@ export function MessagesBoard({ messages }: { messages: MessageRow[] }) {
       {messages.length === 0 ? (
         <EmptyState
           title="No messages yet"
-          hint="Issuing a token queues its WhatsApp confirmation here automatically. Prescription and reminder shares open WhatsApp directly and aren't logged."
+          hint="Issuing a token queues its WhatsApp confirmation here automatically. Prescription, receipt, and reminder shares are logged the moment they're opened in WhatsApp."
         />
       ) : (
         <>

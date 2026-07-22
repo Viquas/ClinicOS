@@ -13,7 +13,7 @@ import { whatsAppLink } from "@/lib/whatsapp";
 import { Printer, Send } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { recordDoseAction } from "./actions";
+import { logReminderShareAction, recordDoseAction } from "./actions";
 
 /**
  * Vaccination module (§7.6 P1).
@@ -192,11 +192,15 @@ export function VaccinationsBoard({
                           href={link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          onClick={() =>
+                          onClick={() => {
                             setReminded((prev) =>
                               new Set(prev).add(child.patientId),
-                            )
-                          }
+                            );
+                            void logReminderShareAction({
+                              toPhone: child.phone,
+                              patientName: child.name,
+                            });
+                          }}
                           className="flex min-h-[var(--touch-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-accent px-5 text-[15px] font-semibold text-accent-ink shadow-[0_8px_20px_-8px_var(--accent)] transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                         >
                           <Send size={17} />

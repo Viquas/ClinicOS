@@ -60,7 +60,15 @@ export default async function BillReceiptPrintPage({
 
   return (
     <div className="min-h-screen bg-canvas print:bg-white">
-      <PrintActions waLink={waLink} waLabel="Send receipt on WhatsApp" />
+      <PrintActions
+        waLink={waLink}
+        waLabel="Send receipt on WhatsApp"
+        share={{
+          templateName: "bill_receipt_share",
+          toPhone: patient.phone,
+          patientName: patient.name,
+        }}
+      />
 
       <div className="mx-auto max-w-[720px] px-4 py-6 print:p-0">
         <article className="print-sheet rounded-[8px] bg-white p-8 text-[#0f1c26] shadow-soft sm:p-10 print:rounded-none print:shadow-none">

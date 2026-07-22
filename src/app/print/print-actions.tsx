@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Printer, Send } from "lucide-react";
+import { logShareAction } from "./actions";
 
 /**
  * The action bar above a printable document. It is `print:hidden`, so it never
@@ -16,10 +17,20 @@ import { ArrowLeft, Printer, Send } from "lucide-react";
 export function PrintActions({
   waLink,
   waLabel = "Send on WhatsApp",
+  share,
 }: {
   /** Prebuilt wa.me URL, or null when the patient has no dialable number. */
   waLink: string | null;
   waLabel?: string;
+  /** When set, opening WhatsApp also writes a "shared" row to the log. */
+  share?: {
+    templateName:
+      | "prescription_share"
+      | "bill_receipt_share"
+      | "vaccination_reminder_share";
+    toPhone: string;
+    patientName: string;
+  };
 }) {
   const router = useRouter();
 
@@ -41,6 +52,9 @@ export function PrintActions({
           href={waLink}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => {
+            if (share) void logShareAction(share);
+          }}
           className="flex min-h-[var(--touch-min)] items-center gap-2 rounded-[var(--radius-pill)] px-4 text-[15px] font-semibold text-accent ring-1 ring-inset ring-accent/40 transition-colors hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           <Send size={17} />
