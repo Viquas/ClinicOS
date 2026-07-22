@@ -55,6 +55,8 @@ export type PrescriptionPrintData = {
     advice: string | null;
     followUpDate: string | null;
   };
+  /** Null for an advice-only visit — the slip then carries no QR/Rx-ID. */
+  prescriptionId: string | null;
   lines: PrescriptionPrintLine[];
 };
 
@@ -185,6 +187,7 @@ export async function getPrescriptionPrintData(
       advice: visit.advice,
       followUpDate: visit.followUpDate,
     },
+    prescriptionId: prescription?.id ?? null,
     lines,
   };
 }
