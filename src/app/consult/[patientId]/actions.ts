@@ -9,6 +9,7 @@ import {
 import { tenantDb } from "@/db/tenant-db";
 import { requireCurrentStaffCan } from "@/lib/auth/guard";
 import { getActiveClinicId } from "@/lib/auth/current-clinic";
+import { getRequestDevice } from "@/lib/audit/request-device";
 
 export async function recordConsultationAction({
   visitId,
@@ -42,6 +43,8 @@ export async function recordConsultationAction({
     if (!rxAuth.ok) return rxAuth;
   }
 
+  const device = await getRequestDevice();
+
   const result = await tenantDb((tx) =>
     recordConsultation({
       clinicId,
@@ -53,6 +56,7 @@ export async function recordConsultationAction({
       advice: advice.trim() || null,
       followUpDate,
       lines,
+      device,
       executor: tx,
     }),
   );

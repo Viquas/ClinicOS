@@ -49,6 +49,7 @@ export async function recordConsultation({
   advice,
   followUpDate,
   lines,
+  device,
   executor = db,
 }: {
   clinicId: string;
@@ -60,6 +61,8 @@ export async function recordConsultation({
   advice: string | null;
   followUpDate: string | null;
   lines: PrescriptionLineInput[];
+  /* Best-effort signing-device detail for the audit row (§9). */
+  device?: { ip: string | null; userAgent: string | null };
   /* Pass the tenant transaction to run under RLS; its own transaction
      then nests as a savepoint rather than taking a fresh connection. */
   executor?: Executor;
@@ -137,7 +140,10 @@ export async function recordConsultation({
       action: "consultation_completed",
       entityTable: "consultations",
       entityId: visitId,
-      detail: { prescriptionLineCount: lines.length },
+      detail: {
+        prescriptionLineCount: lines.length,
+        ...(device ? { device } : {}),
+      },
     });
 
     return { ok: true as const };

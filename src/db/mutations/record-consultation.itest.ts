@@ -223,3 +223,56 @@ describe("recordConsultation", () => {
     expect(entry.detail).toMatchObject({ prescriptionLineCount: 1 });
   });
 });
+
+describe("device capture", () => {
+  const DCLINIC = "11111111-1111-1111-1111-111111111111";
+  const DPATIENT = "44444444-0000-0000-0000-000000000004";
+  const DDOCTOR = "33333333-0000-0000-0000-000000000001";
+  const DSTAFF = "22222222-0000-0000-0000-000000000003";
+  let dVisitId: string;
+  let dTokenId: string;
+
+  beforeEach(async () => {
+    const [v] = await db
+      .insert(visits)
+      .values({ clinicId: DCLINIC, patientId: DPATIENT, doctorId: DDOCTOR, visitDate: clinicToday() })
+      .returning({ id: visits.id });
+    dVisitId = v.id;
+    const [t] = await db
+      .insert(tokens)
+      .values({ clinicId: DCLINIC, visitId: dVisitId, doctorId: DDOCTOR, tokenDate: clinicToday(), number: 97, state: "with_doctor" })
+      .returning({ id: tokens.id });
+    dTokenId = t.id;
+  });
+
+  afterEach(async () => {
+    await db.delete(auditLog).where(eq(auditLog.entityId, dVisitId));
+    await db.delete(consultations).where(eq(consultations.visitId, dVisitId));
+    await db.delete(tokens).where(eq(tokens.id, dTokenId));
+    await db.delete(visits).where(eq(visits.id, dVisitId));
+  });
+
+  it("stores the signing device in the audit detail when provided", async () => {
+    const result = await recordConsultation({
+      clinicId: DCLINIC,
+      visitId: dVisitId,
+      tokenId: dTokenId,
+      doctorId: DDOCTOR,
+      actorStaffId: DSTAFF,
+      diagnosis: "Device-capture test",
+      advice: null,
+      followUpDate: null,
+      lines: [],
+      device: { ip: "10.0.0.9", userAgent: "TestTablet/1.0" },
+    });
+    expect(result.ok).toBe(true);
+
+    const [entry] = await db
+      .select({ detail: auditLog.detail })
+      .from(auditLog)
+      .where(eq(auditLog.entityId, dVisitId));
+    expect(entry.detail).toMatchObject({
+      device: { ip: "10.0.0.9", userAgent: "TestTablet/1.0" },
+    });
+  });
+});
